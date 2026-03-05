@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>RSSext</h1>
+    <button id="add-current" title="__MSG_ui_add_current__">+</button>
+    <button id="btn-export">Export OPML</button>
+    <input type="file" id="input-import" accept=".opml,.xml" style="display:none">
+    <button id="btn-import">Import OPML</button>
+  </header>
+
+  <main id="app">
+    <div id="empty-state" class="hidden">__MSG_ui_no_items__</div>
+    <div id="feed-list"></div>
+  </main>
+
+  <footer>
+    <button id="open-settings">__MSG_ui_settings__</button>
+  </header>
+
+  <dialog id="edit-dialog">
+    <form method="dialog">
+      <h2>__MSG_ui_edit_source__</h2>
+      <label>
+        Name:
+        <input type="text" id="edit-name" required>
+      </label>
+      <label>
+        Folder:
+        <input type="text" id="edit-folder" list="folder-suggestions">
+        <datalist id="folder-suggestions"></datalist>
+      </label>
+      <label>
+        <input type="checkbox" id="edit-notify"> Enable Notifications
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="delete-source" class="danger">Delete Source</button>
+        <button type="submit" value="cancel">Cancel</button>
+        <button type="submit" value="save" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

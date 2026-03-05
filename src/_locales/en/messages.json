@@ -1,0 +1,34 @@
+{
+  "extName": {
+    "message": "RSSext",
+    "description": "The name of the extension"
+  },
+  "extDesc": {
+    "message": "A minimalist, ephemeral RSS scanner. Notify, click, discard.",
+    "description": "The description of the extension"
+  },
+  "action_open": {
+    "message": "Open",
+    "description": "Label for the open button in notifications"
+  },
+  "action_discard": {
+    "message": "Discard",
+    "description": "Label for the discard button"
+  },
+  "ui_add_current": {
+    "message": "Add current tab",
+    "description": "Button to add the current website to sources"
+  },
+  "ui_no_items": {
+    "message": "No new updates.",
+    "description": "Message shown when the queue is empty"
+  },
+  "ui_settings": {
+    "message": "Settings",
+    "description": "Settings label"
+  },
+  "ui_edit_source": {
+    "message": "Edit Source",
+    "description": "Title for the edit overlay"
+  }
+}
