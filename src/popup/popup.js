@@ -7,28 +7,101 @@ import { DB } from "../db.js";
 
 // Références DOM
 const feedList = document.getElementById("feed-list");
+const toggleViewBtn = document.getElementById("toggle-view");
 const emptyState = document.getElementById("empty-state");
 const addBtn = document.getElementById("add-current");
 const dialog = document.getElementById("edit-dialog");
 const editForm = dialog.querySelector("form");
+const settingsDialog = document.getElementById("settings-dialog");
+const openSettingsBtn = document.getElementById("open-settings");
+const closeSettingsBtn = document.getElementById("close-settings");
 
-document.getElementById("btn-export").onclick = exportOPML;
-document.getElementById("btn-import").onclick = () =>
-  document.getElementById("input-import").click();
-document.getElementById("input-import").onchange = (e) =>
-  importOPML(e.target.files[0]);
+const SVG_CAT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-group-category">
+  <line x1="4" y1="4" x2="20" y2="4"></line>
+  <line x1="9" y1="7" x2="20" y2="7"></line>
+  <line x1="9" y1="10" x2="20" y2="10"></line>
+  <line x1="4" y1="13" x2="20" y2="13"></line>
+  <line x1="9" y1="16" x2="20" y2="16"></line>
+  <line x1="9" y1="19" x2="20" y2="19"></line>
+</svg>`;
+
+const SVG_DATE = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-sort-date">
+  <line x1="4" y1="4" x2="20" y2="4"></line>
+  <line x1="4" y1="7" x2="18" y2="7"></line>
+  <line x1="4" y1="10" x2="16" y2="10"></line>
+  <line x1="4" y1="13" x2="14" y2="13"></line>
+  <line x1="4" y1="16" x2="12" y2="16"></line>
+  <line x1="4" y1="19" x2="10" y2="19"></line>
+</svg>`;
+
+const SVG_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-chevron"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+const SVG_EDIT = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
+const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
 
 /**
  * INITIALISATION
  */
 document.addEventListener("DOMContentLoaded", async () => {
+  if (!localStorage.getItem("view_mode")) {
+    localStorage.setItem("view_mode", "date");
+  }
+
+  // Application du thème sauvegardé au démarrage
+  chrome.storage.sync.get(["hue"], (result) => {
+    if (result.hue) {
+      document.documentElement.style.setProperty("--main-hue", result.hue);
+    }
+  });
+
   renderApp();
 
   // Écouteur pour ajouter l'onglet courant
   addBtn.addEventListener("click", detectAndAddFeed);
 
+  if (toggleViewBtn) {
+    toggleViewBtn.addEventListener("click", () => {
+      const current = localStorage.getItem("view_mode") || "date";
+      localStorage.setItem("view_mode", current === "date" ? "folder" : "date");
+      renderApp();
+    });
+  }
+
   // Gestion de la fermeture du dialog
   editForm.addEventListener("submit", handleDialogSubmit);
+
+  // --- GESTION DES PARAMÈTRES ---
+  openSettingsBtn.addEventListener("click", openSettings);
+  closeSettingsBtn.addEventListener("click", () => settingsDialog.close());
+
+  // Sauvegarde automatique au changement
+  const settingInputs = [
+    { id: "setting-interval", key: "interval", type: "int" },
+    { id: "setting-ttl", key: "ttl", type: "int" },
+    { id: "setting-notify", key: "notify", type: "bool" },
+    { id: "setting-hue", key: "hue", type: "value" }
+  ];
+
+  settingInputs.forEach(input => {
+    document.getElementById(input.id).addEventListener("change", (e) => {
+      let value = e.target.value;
+      if (input.type === "int") value = parseInt(value, 10);
+      if (input.type === "bool") value = e.target.checked;
+      
+      saveSingleSetting(input.key, value);
+    });
+  });
+
+  // Live preview du thème
+  document.getElementById("setting-hue").addEventListener("input", (e) => {
+    document.documentElement.style.setProperty("--main-hue", e.target.value);
+    document.getElementById("hue-value").textContent = e.target.value;
+  });
+
+  // Import/Export dans les settings
+  document.getElementById("btn-export-settings").onclick = exportOPML;
+  document.getElementById("btn-import-settings").onclick = () => document.getElementById("input-import-settings").click();
+  document.getElementById("input-import-settings").onchange = (e) => importOPML(e.target.files[0]);
 });
 
 /**
@@ -36,36 +109,148 @@ document.addEventListener("DOMContentLoaded", async () => {
  * Affiche les articles du buffer regroupés par source/dossier.
  */
 async function renderApp() {
+  const viewMode = localStorage.getItem("view_mode") || "date";
+
+  if (toggleViewBtn) {
+    toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;
+  }
+
   const allItems = await DB.getItems();
   // On ne garde que ceux qui n'ont pas le flag 'hidden'
   const items = allItems.filter((item) => !item.hidden);
+  const sources = await DB.getSources();
 
-  if (items.length === 0) {
+  const sourceMap = sources.reduce((acc, s) => {
+    acc[s.xmlUrl] = { title: s.title, folder: s.folder || "General" };
+    return acc;
+  }, {});
+
+  // Mise à jour du badge
+  chrome.action.setBadgeText({ text: items.length > 0 ? items.length.toString() : "" });
+
+  // Condition d'affichage de l'état vide :
+  // - Mode Date : Pas d'articles
+  // - Mode Dossier : Pas de sources (car si on a des sources mais pas d'articles, on veut voir les sources)
+  const showEmptyState = (viewMode === "date" && items.length === 0) || (viewMode === "folder" && sources.length === 0);
+
+  if (showEmptyState) {
     feedList.innerHTML = "";
     emptyState.classList.remove("hidden");
+
+    if (sources.length === 0) {
+      emptyState.textContent = "Aucune source. Ajoutez un flux ou importez un OPML pour commencer.";
+    } else {
+      emptyState.textContent = chrome.i18n.getMessage("ui_no_items") || "No new items";
+    }
     return;
   }
 
   emptyState.classList.add("hidden");
 
-  // Tri par timestamp (plus récent en haut)
-  items.sort((a, b) => b.timestamp - a.timestamp);
+  if (viewMode === "folder") {
+    // 1. Initialisation de la structure avec TOUTES les sources
+    const structure = {};
+    const urlToFolder = {}; // Map pour retrouver le dossier d'un item rapidement
 
-  feedList.innerHTML = items
-    .map(
-      (item) => `
-    <div class="item-row" data-id="${item.id}">
-      <a href="${item.link}" target="_blank" class="item-link" data-action="open">
-        ${item.title}
-      </a>
-      <button class="discard-btn" data-action="discard" title="Discard">×</button>
-    </div>
-  `,
-    )
-    .join("");
+    sources.forEach(s => {
+      const f = s.folder || "General";
+      if (!structure[f]) structure[f] = {};
+      // On utilise l'URL comme clé unique
+      structure[f][s.xmlUrl] = { title: s.title, url: s.xmlUrl, items: [] };
+      urlToFolder[s.xmlUrl] = f;
+    });
+
+    // 2. Distribution des articles dans la structure
+    items.forEach(item => {
+      const f = urlToFolder[item.xmlUrl];
+      // Si la source existe toujours (n'a pas été supprimée entre temps)
+      if (f && structure[f][item.xmlUrl]) {
+        structure[f][item.xmlUrl].items.push(item);
+      }
+    });
+
+    const sortedFolders = Object.keys(structure).sort();
+
+    feedList.innerHTML = sortedFolders.map(folder => {
+      const sourcesInFolder = structure[folder];
+      // Tri des sources par titre
+      const sortedSourceUrls = Object.keys(sourcesInFolder).sort((a, b) => {
+        return sourcesInFolder[a].title.localeCompare(sourcesInFolder[b].title);
+      });
+
+      let folderCount = 0;
+
+      const sourcesHtml = sortedSourceUrls.map(url => {
+        const data = sourcesInFolder[url];
+        const sourceItems = data.items.sort((a, b) => b.timestamp - a.timestamp);
+        folderCount += sourceItems.length;
+
+        return `
+          <div class="source-group">
+            <h4 class="collapsible-header source-header">
+              ${SVG_CHEVRON}
+              <span>${data.title} (${sourceItems.length})</span>
+              <div class="source-actions">
+                <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${chrome.i18n.getMessage("ui_edit") || "Edit"}">
+                  ${SVG_EDIT}
+                </button>
+                <button class="icon-btn" data-action="delete-source" data-url="${data.url}" title="${chrome.i18n.getMessage("ui_delete") || "Delete"}">
+                  ${SVG_TRASH}
+                </button>
+              </div>
+            </h4>
+            <div class="group-content">
+              ${sourceItems.map(i => renderItemHtml(i)).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="folder-group">
+          <h3 class="collapsible-header folder-header">
+            ${SVG_CHEVRON}
+            <span>${folder} (${folderCount})</span>
+          </h3>
+          <div class="group-content">
+            ${sourcesHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+  } else {
+    // Tri par timestamp (plus récent en haut)
+    items.sort((a, b) => b.timestamp - a.timestamp);
+    feedList.innerHTML = items.map(item => renderItemHtml(item, sourceMap[item.xmlUrl])).join("");
+  }
 
   // Délégation d'événements pour le buffer
   feedList.onclick = async (e) => {
+    // 1. Gestion des actions de Source (Edit / Delete)
+    const actionBtn = e.target.closest("button[data-action='edit-source'], button[data-action='delete-source']");
+    if (actionBtn) {
+      e.stopPropagation(); // Empêche le repli du dossier
+      const url = actionBtn.dataset.url;
+      
+      if (actionBtn.dataset.action === "edit-source") {
+        const sources = await DB.getSources();
+        const source = sources.find(s => s.xmlUrl === url);
+        if (source) openEditOverlay(source);
+      } else {
+        if (confirm(chrome.i18n.getMessage("ui_confirm_delete") || "Delete source and all items?")) {
+          await DB.deleteSource(url);
+          renderApp();
+        }
+      }
+      return;
+    }
+
+    const header = e.target.closest(".collapsible-header");
+    if (header) {
+      header.classList.toggle("collapsed");
+      return;
+    }
+
     const btn = e.target.closest("button, a");
     if (!btn) return;
 
@@ -74,11 +259,67 @@ async function renderApp() {
     const action = btn.dataset.action;
 
     if (action === "discard" || action === "open") {
+      if (action === "open") {
+        e.preventDefault();
+      }
+
       await DB.hideItem(id);
+
+      const sourceGroup = row.closest(".source-group");
+      const folderGroup = row.closest(".folder-group");
+      
       row.remove();
-      if (feedList.children.length === 0) renderApp();
+
+      if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
+        sourceGroup.remove();
+      }
+
+      if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
+        folderGroup.remove();
+      }
+
+      const remaining = feedList.querySelectorAll(".item-row").length;
+      chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
+
+      if (remaining === 0) {
+        renderApp();
+      } else {
+        // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
+        if (sourceGroup && sourceGroup.isConnected) {
+          const span = sourceGroup.querySelector("h4 span");
+          if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
+        }
+        if (folderGroup && folderGroup.isConnected) {
+          const span = folderGroup.querySelector("h3 span");
+          if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
+        }
+      }
+
+      if (action === "open") {
+        const background = e.ctrlKey || e.metaKey;
+        chrome.tabs.create({ url: btn.href, active: !background });
+      }
     }
   };
+}
+
+function renderItemHtml(item, sourceInfo = null) {
+  let metaHtml = "";
+  if (sourceInfo) {
+    metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${sourceInfo.folder} &bull; ${sourceInfo.title}</div>`;
+  }
+
+  return `
+    <div class="item-row" data-id="${item.id}">
+      <div style="flex: 1; min-width: 0; margin-right: 10px;">
+        <a href="${item.link}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
+          ${item.title}
+        </a>
+        ${metaHtml}
+      </div>
+      <button class="discard-btn" data-action="discard" title="Discard">×</button>
+    </div>
+  `;
 }
 
 /**
@@ -185,6 +426,38 @@ async function handleDialogSubmit(e) {
   renderApp();
 }
 
+/**
+ * GESTION DES PARAMÈTRES
+ */
+function openSettings() {
+  // Valeurs par défaut
+  const defaults = {
+    interval: 30,
+    ttl: 30,
+    notify: true,
+    hue: 210
+  };
+
+  chrome.storage.sync.get(["interval", "ttl", "notify", "hue"], (result) => {
+    const settings = { ...defaults, ...result };
+    
+    document.getElementById("setting-interval").value = settings.interval;
+    document.getElementById("setting-ttl").value = settings.ttl;
+    document.getElementById("setting-notify").checked = settings.notify;
+    document.getElementById("setting-hue").value = settings.hue;
+    document.getElementById("hue-value").textContent = settings.hue;
+
+    settingsDialog.showModal();
+  });
+}
+
+function saveSingleSetting(key, value) {
+  chrome.storage.sync.set({ [key]: value }, () => {
+    // Notifier le background script pour mettre à jour les alarmes si nécessaire
+    chrome.runtime.sendMessage({ action: "update_settings" });
+  });
+}
+
 // Bouton supprimer dans l'overlay
 document.getElementById("delete-source").onclick = async () => {
   if (confirm("Delete this source and all its items?")) {
@@ -229,22 +502,36 @@ async function exportOPML() {
 async function importOPML(file) {
   const text = await file.text();
   const parser = new DOMParser();
-  const doc = parser.parseFromString(text, "application/xml");
-  const outlines = doc.querySelectorAll("outline[xmlUrl]");
+  
+  // Utiliser "text/html" rend le parsing beaucoup plus tolérant aux erreurs XML d'Inoreader
+  const doc = parser.parseFromString(text, "text/html");
+  
+  // On cherche les outlines qui ont une URL (peu importe la casse de xmlUrl/xmlURL)
+  const outlines = doc.querySelectorAll("outline[xmlUrl], outline[xmlURL]");
+  
+  console.log(`[RSSext] Import : ${outlines.length} sources trouvées.`);
 
   for (const el of outlines) {
-    // On cherche le nom du dossier (parent direct sans xmlUrl)
-    const parent = el.parentElement.closest("outline:not([xmlUrl])");
-    const folder = parent ? parent.getAttribute("text") : "Imported";
+    const url = el.getAttribute("xmlUrl") || el.getAttribute("xmlURL");
+    if (!url) continue;
+
+    // Détection du dossier : on remonte au parent qui n'est pas un flux
+    const folderEl = el.parentElement.closest("outline:not([xmlUrl]):not([xmlURL])");
+    const folder = folderEl ? (folderEl.getAttribute("text") || folderEl.getAttribute("title")) : "Imported";
+
+    // Gestion du cas spécifique Inoreader : texte/titre parfois vides
+    const title = el.getAttribute("text") || el.getAttribute("title") || url;
 
     await DB.putSource({
-      xmlUrl: el.getAttribute("xmlUrl"),
-      title: el.getAttribute("text") || el.getAttribute("title") || "No Title",
+      xmlUrl: url,
+      title: title,
       folder: folder,
       notify: true,
     });
   }
 
-  // Refresh de l'interface après import
+  // Force le rafraîchissement de l'UI et lance un scan
+  alert(`${outlines.length} sources importées avec succès.`);
   renderApp();
+  chrome.runtime.sendMessage({ action: "scan_now" });
 }

@@ -13,8 +13,8 @@
 import { DB } from "./db.js";
 
 // Configuration par défaut (pourrait être déplacée dans chrome.storage plus tard)
-const DEFAULT_INTERVAL = 30; // minutes
-const TTL_DAYS = 30;
+const DEFAULT_INTERVAL = 30;
+const DEFAULT_TTL = 30;
 
 /**
  * INITIALISATION
@@ -26,6 +26,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("rss-scan-alarm", { periodInMinutes: DEFAULT_INTERVAL });
   // Premier scan immédiat
   performScan();
+  updateBadge();
 });
 
 /**
@@ -43,12 +44,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
  */
 async function performScan() {
   try {
+    // Récupération de la config
+    const config = await chrome.storage.sync.get(["ttl", "notify"]);
+    const ttl = config.ttl || DEFAULT_TTL;
+
     // 1. Purge du buffer (TTL) avant de commencer
-    await DB.purgeOldItems(TTL_DAYS);
+    await DB.purgeOldItems(ttl);
 
     // 2. Récupération des sources
     const sources = await DB.getSources();
-    if (sources.length === 0) return;
 
     // 3. Scan asynchrone de chaque source
     for (const source of sources) {
@@ -68,7 +72,8 @@ async function performScan() {
           await DB.addItems(newItems);
 
           // Notification si l'option est activée pour cette source
-          if (source.notify) {
+          // ET si les notifications globales sont activées (défaut true)
+          if (source.notify && (config.notify !== false)) {
             notifyUser(source, newItems);
           }
         }
@@ -76,6 +81,7 @@ async function performScan() {
         console.error(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
       }
     }
+    await updateBadge();
   } catch (err) {
     console.error("RSSext: Scan process failed", err);
   }
@@ -151,6 +157,16 @@ function notifyUser(source, newItems) {
 }
 
 /**
+ * MISE À JOUR DU BADGE
+ */
+async function updateBadge() {
+  const items = await DB.getItems();
+  const count = items.filter((i) => !i.hidden).length;
+  const text = count > 0 ? count.toString() : "";
+  chrome.action.setBadgeText({ text });
+}
+
+/**
  * GESTION DES CLICS SUR NOTIFICATIONS
  */
 chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
@@ -174,5 +190,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       })
       .catch(() => sendResponse({ valid: false }));
     return true; // Obligatoire pour garder le canal ouvert (asynchrone)
+  }
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "scan_now") {
+    console.log("RSSext: Scan manuel déclenché après import.");
+    performScan(); // Ta fonction qui boucle sur les sources et fetch le XML
+  }
+
+  if (request.action === "update_settings") {
+    console.log("RSSext: Settings updated. Refreshing alarm...");
+    chrome.storage.sync.get(["interval"], (res) => {
+      const interval = res.interval || DEFAULT_INTERVAL;
+      chrome.alarms.create("rss-scan-alarm", { periodInMinutes: interval });
+    });
+    // On peut aussi lancer un scan immédiat pour appliquer le nouveau TTL
+    performScan();
   }
 });

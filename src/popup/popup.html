@@ -8,20 +8,37 @@
 <body>
   <header>
     <h1>RSSext</h1>
-    <button id="add-current" title="__MSG_ui_add_current__">+</button>
-    <button id="btn-export">Export OPML</button>
-    <input type="file" id="input-import" accept=".opml,.xml" style="display:none">
-    <button id="btn-import">Import OPML</button>
+    <div id="head-buttons">
+      <button id="toggle-view" title="Toggle View">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-group-category">
+          <line x1="4" y1="4" x2="20" y2="4"></line>
+          <line x1="9" y1="7" x2="20" y2="7"></line>
+          <line x1="9" y1="10" x2="20" y2="10"></line>
+          <line x1="4" y1="13" x2="20" y2="13"></line>
+          <line x1="9" y1="16" x2="20" y2="16"></line>
+          <line x1="9" y1="19" x2="20" y2="19"></line>
+        </svg>
+      </button>
+      <button id="add-current" title="__MSG_ui_add_current__">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-add-container">
+          <polyline points="20 8 20 4 4 4 4 20 20 20 20 16"></polyline>
+          <line x1="16" y1="12" x2="23" y2="12"></line>
+          <polyline points="21 10 23 12 21 14"></polyline>
+        </svg>
+      </button>
+      <button id="open-settings" title="__MSG_ui_settings__">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-settings">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <main id="app">
     <div id="empty-state" class="hidden">__MSG_ui_no_items__</div>
     <div id="feed-list"></div>
   </main>
-
-  <footer>
-    <button id="open-settings">__MSG_ui_settings__</button>
-  </header>
 
   <dialog id="edit-dialog">
     <form method="dialog">
@@ -43,6 +60,55 @@
         <button type="submit" value="cancel">Cancel</button>
         <button type="submit" value="save" class="primary">Save</button>
       </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog">
+    <div class="dialog-header">
+      <h2>__MSG_ui_settings__</h2>
+      <button id="close-settings" title="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <form>
+      
+      <fieldset>
+        <legend>General</legend>
+        <label>
+          Update Interval (minutes):
+          <input type="number" id="setting-interval" min="5" max="1440">
+        </label>
+        <label>
+          Retention (days):
+          <input type="number" id="setting-ttl" min="1" max="365">
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="setting-notify"> Enable Global Notifications
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Appearance</legend>
+        <label>
+          Theme Color (Hue):
+          <div class="range-wrapper">
+            <input type="range" id="setting-hue" min="0" max="360">
+            <span id="hue-value"></span>
+          </div>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Data Management (OPML)</legend>
+        <div class="data-actions">
+          <button type="button" id="btn-import-settings">Import OPML</button>
+          <button type="button" id="btn-export-settings">Export OPML</button>
+          <input type="file" id="input-import-settings" accept=".opml,.xml" style="display:none">
+        </div>
+      </fieldset>
     </form>
   </dialog>
 
