@@ -38,6 +38,10 @@ const SVG_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="
 const SVG_EDIT = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
 
+const SVG_CHECK_ALL = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L7 17l-5-5"></path><path d="M22 10l-7.5 7.5L13 16"></path></svg>`;
+const SVG_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+const SVG_COLLAPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+
 // Raccourci i18n
 const t = (key) => chrome.i18n.getMessage(key);
 
@@ -161,15 +165,71 @@ async function renderApp() {
   const viewMode = settings.view_mode || "date";
   const collapsedState = settings.collapsed || {};
 
-  if (toggleViewBtn) {
-    toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;
-    toggleViewBtn.title = viewMode === "folder" ? t("ui_switch_to_date") : t("ui_switch_to_folder");
-  }
-
   const allItems = await DB.getItems();
   // On ne garde que ceux qui n'ont pas le flag 'hidden'
   const items = allItems.filter((item) => !item.hidden);
   const sources = await DB.getSources();
+
+  // --- GESTION DES BOUTONS D'ACTION (Header) ---
+  const listActions = document.getElementById("list-actions");
+  listActions.innerHTML = "";
+
+  if (viewMode === "folder" && sources.length > 0) {
+    // Bouton Expand All
+    const btnExpand = document.createElement("button");
+    btnExpand.innerHTML = SVG_EXPAND;
+    btnExpand.title = t("action_expand_all");
+    btnExpand.onclick = () => {
+      chrome.storage.local.set({ collapsed: {} });
+      renderApp();
+    };
+    
+    // Bouton Collapse All
+    const btnCollapse = document.createElement("button");
+    btnCollapse.innerHTML = SVG_COLLAPSE;
+    btnCollapse.title = t("action_collapse_all");
+    btnCollapse.onclick = () => {
+      const allCollapsed = {};
+      // On replie tous les dossiers et toutes les sources
+      const folders = new Set();
+      sources.forEach(s => folders.add(s.folder || t("folder_general")));
+      folders.forEach(f => allCollapsed[`folder:${f}`] = true);
+      sources.forEach(s => allCollapsed[`source:${s.xmlUrl}`] = true);
+      
+      chrome.storage.local.set({ collapsed: allCollapsed });
+      renderApp();
+    };
+
+    listActions.appendChild(btnExpand);
+    listActions.appendChild(btnCollapse);
+  } else if (viewMode === "date" && items.length > 0) {
+    // Bouton Dismiss All
+    const btnDismiss = document.createElement("button");
+    btnDismiss.innerHTML = SVG_CHECK_ALL;
+    btnDismiss.title = t("action_dismiss_all");
+    btnDismiss.onclick = async () => {
+      if (confirm(t("ui_confirm_dismiss_all"))) {
+        // Effet visuel "throttlé" (cascade)
+        const rows = Array.from(document.querySelectorAll(".item-row"));
+        rows.forEach((row, index) => {
+          setTimeout(() => row.classList.add("dismissing"), index * 60);
+        });
+
+        // On attend que la cascade + l'animation (300ms) soient finies
+        await new Promise(resolve => setTimeout(resolve, (rows.length * 60) + 300));
+
+        const promises = items.map(i => DB.hideItem(i.id));
+        await Promise.all(promises);
+        renderApp();
+      }
+    };
+    listActions.appendChild(btnDismiss);
+  }
+
+  if (toggleViewBtn) {
+    toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;
+    toggleViewBtn.title = viewMode === "folder" ? t("ui_switch_to_date") : t("ui_switch_to_folder");
+  }
 
   const sourceMap = sources.reduce((acc, s) => {
     acc[s.xmlUrl] = { title: s.title, folder: s.folder || t("folder_general") };
@@ -345,37 +405,43 @@ async function renderApp() {
         e.preventDefault();
       }
 
-      await DB.hideItem(id);
+      // Animation de sortie
+      row.classList.add("dismissing");
 
-      const sourceGroup = row.closest(".source-group");
-      const folderGroup = row.closest(".folder-group");
-      
-      row.remove();
+      // On attend la fin de l'animation CSS (300ms) avant de supprimer du DOM/DB
+      setTimeout(async () => {
+        await DB.hideItem(id);
 
-      if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
-        sourceGroup.remove();
-      }
+        const sourceGroup = row.closest(".source-group");
+        const folderGroup = row.closest(".folder-group");
+        
+        row.remove();
 
-      if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
-        folderGroup.remove();
-      }
-
-      const remaining = feedList.querySelectorAll(".item-row").length;
-      chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
-
-      if (remaining === 0) {
-        renderApp();
-      } else {
-        // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
-        if (sourceGroup && sourceGroup.isConnected) {
-          const span = sourceGroup.querySelector("h4 span");
-          if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
+        if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
+          sourceGroup.remove();
         }
-        if (folderGroup && folderGroup.isConnected) {
-          const span = folderGroup.querySelector("h3 span");
-          if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
+
+        if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
+          folderGroup.remove();
         }
-      }
+
+        const remaining = feedList.querySelectorAll(".item-row").length;
+        chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
+
+        if (remaining === 0) {
+          renderApp();
+        } else {
+          // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
+          if (sourceGroup && sourceGroup.isConnected) {
+            const span = sourceGroup.querySelector("h4 span");
+            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
+          }
+          if (folderGroup && folderGroup.isConnected) {
+            const span = folderGroup.querySelector("h3 span");
+            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
+          }
+        }
+      }, 300); // Correspond à la durée de transition CSS
 
       if (action === "open") {
         const background = e.ctrlKey || e.metaKey;

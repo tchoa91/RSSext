@@ -15,6 +15,22 @@
     "message": "Discard",
     "description": "Label for the discard button"
   },
+  "action_dismiss_all": {
+    "message": "Dismiss All",
+    "description": "Tooltip for dismiss all button"
+  },
+  "action_expand_all": {
+    "message": "Expand All",
+    "description": "Tooltip for expand all button"
+  },
+  "action_collapse_all": {
+    "message": "Collapse All",
+    "description": "Tooltip for collapse all button"
+  },
+  "ui_confirm_dismiss_all": {
+    "message": "Mark all visible items as read?",
+    "description": "Confirmation for dismiss all"
+  },
   "ui_add_current": {
     "message": "Add current tab",
     "description": "Button to add the current website to sources"

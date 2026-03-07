@@ -39,6 +39,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   } else if (alarm.name.startsWith("retry:")) {
     // Gestion du retry notification (après 15 min)
     const itemId = alarm.name.split(":")[1];
+
+    // Vérification des préférences globales au moment du retry
+    const config = await chrome.storage.local.get(["notify"]);
+    if (config.notify === false) return;
+
     const items = await DB.getItems();
     const item = items.find((i) => i.id === itemId);
     // On ne relance que si l'item existe encore et n'est pas caché
@@ -47,11 +52,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
       const sources = await DB.getSources();
       const source = sources.find((s) => s.xmlUrl === item.xmlUrl);
       if (source) {
-        NotificationSystem.enqueue(item, source, 2); // Tentative 2
+        // Vérification que la source est toujours notifiable
+        if (source.notify) {
+          NotificationSystem.enqueue(item, source, 2); // Tentative 2
+        }
       }
     }
   }
-});
+  }
+);
 
 /**
  * LOGIQUE DE SCAN PRINCIPALE
@@ -128,7 +137,8 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
     const titleMatch = block.match(
       /<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/,
     );
-    const title = titleMatch ? titleMatch[1].trim() : chrome.i18n.getMessage("item_no_title");
+    let title = titleMatch ? titleMatch[1].trim() : chrome.i18n.getMessage("item_no_title");
+    title = decodeEntities(title);
 
     let link = "";
     const rssLinkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
@@ -155,6 +165,13 @@ const NotificationSystem = {
   queue: [],
   isProcessing: false,
   handledIds: new Set(), // IDs traités par l'utilisateur (clic/close) pour éviter le retry
+
+  /**
+   * Vide la file d'attente.
+   */
+  clear() {
+    this.queue = [];
+  },
 
   /**
    * Ajoute une notification à la file d'attente.
@@ -219,7 +236,7 @@ const NotificationSystem = {
       requireInteraction: true, // On force l'affichage jusqu'au clear()
     });
 
-    // Auto-clear après 15 secondes (demande utilisateur) -> Déclenche onClosed
+    // Auto-clear après 30 secondes -> Déclenche onClosed
     setTimeout(() => {
       chrome.notifications.clear(notifId);
     }, 30000);
@@ -325,6 +342,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "update_settings") {
     console.log("RSSext: Settings updated. Refreshing alarm...");
+    
+    // Interruption immédiate des notifications en cours
+    NotificationSystem.clear();
+
     chrome.storage.local.get(["interval"], (res) => {
       const interval = parseInt(res.interval, 10) || DEFAULT_INTERVAL;
       chrome.alarms.create("rss-scan-alarm", { periodInMinutes: interval });
@@ -333,3 +354,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     performScan();
   }
 });
+
+/**
+ * Décode les entités HTML (numériques et nommées basiques)
+ */
+function decodeEntities(str) {
+  if (!str) return "";
+  return str.replace(/&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/ig, (match, entity) => {
+    entity = entity.toLowerCase();
+    if (entity.startsWith("#x")) {
+      return String.fromCharCode(parseInt(entity.substr(2), 16));
+    }
+    if (entity.startsWith("#")) {
+      return String.fromCharCode(parseInt(entity.substr(1), 10));
+    }
+    const named = {
+      "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'"
+    };
+    return named[entity] || match;
+  });
+}
