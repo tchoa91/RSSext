@@ -37,6 +37,23 @@ const SVG_CHEVRON = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="
 const SVG_EDIT = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`;
 const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
 
+// Raccourci i18n
+const t = (key) => chrome.i18n.getMessage(key);
+
+/**
+ * Traduit les éléments HTML ayant un attribut data-i18n
+ */
+function translateUI() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const msg = t(el.dataset.i18n);
+    if (msg) el.textContent = msg;
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const msg = t(el.dataset.i18nTitle);
+    if (msg) el.title = msg;
+  });
+}
+
 /**
  * INITIALISATION
  */
@@ -56,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  translateUI();
   renderApp();
 
   // Écouteur pour ajouter l'onglet courant
@@ -97,7 +115,7 @@ async function renderApp() {
   const sources = await DB.getSources();
 
   const sourceMap = sources.reduce((acc, s) => {
-    acc[s.xmlUrl] = { title: s.title, folder: s.folder || "General" };
+    acc[s.xmlUrl] = { title: s.title, folder: s.folder || t("folder_general") };
     return acc;
   }, {});
 
@@ -120,17 +138,17 @@ async function renderApp() {
 
       emptyState.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px;">
-          <h2 style="margin: 0;">Welcome !</h2>
-          <p style="margin: 0;">Start by adding the current page</p>
-          <button id="btn-welcome-add" class="primary" style="gap: 5px;">${iconAdd} Add</button>
-          <p style="margin: 0;">or by adding your sources</p>
-          <button id="btn-welcome-options" style="gap: 5px;">${iconSettings} Options</button>
+          <h2 style="margin: 0;">${t("welcome_title")}</h2>
+          <p style="margin: 0;">${t("welcome_add")}</p>
+          <button id="btn-welcome-add" class="primary" style="gap: 5px;">${iconAdd} ${t("btn_add")}</button>
+          <p style="margin: 0;">${t("welcome_sources")}</p>
+          <button id="btn-welcome-options" style="gap: 5px;">${iconSettings} ${t("btn_options")}</button>
         </div>
       `;
       document.getElementById("btn-welcome-add").onclick = detectAndAddFeed;
       document.getElementById("btn-welcome-options").onclick = () => chrome.runtime.openOptionsPage();
     } else {
-      emptyState.textContent = chrome.i18n.getMessage("ui_no_items") || "No new items";
+      emptyState.textContent = t("ui_no_items");
     }
     return;
   }
@@ -143,7 +161,7 @@ async function renderApp() {
     const urlToFolder = {}; // Map pour retrouver le dossier d'un item rapidement
 
     sources.forEach(s => {
-      const f = s.folder || "General";
+      const f = s.folder || t("folder_general");
       if (!structure[f]) structure[f] = {};
       // On utilise l'URL comme clé unique
       structure[f][s.xmlUrl] = { title: s.title, url: s.xmlUrl, items: [] };
@@ -181,10 +199,10 @@ async function renderApp() {
               ${SVG_CHEVRON}
               <span>${data.title} (${sourceItems.length})</span>
               <div class="source-actions">
-                <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${chrome.i18n.getMessage("ui_edit") || "Edit"}">
+                <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
                   ${SVG_EDIT}
                 </button>
-                <button class="icon-btn" data-action="delete-source" data-url="${data.url}" title="${chrome.i18n.getMessage("ui_delete") || "Delete"}">
+                <button class="icon-btn" data-action="delete-source" data-url="${data.url}" title="${t("ui_delete")}">
                   ${SVG_TRASH}
                 </button>
               </div>
@@ -227,7 +245,7 @@ async function renderApp() {
         const source = sources.find(s => s.xmlUrl === url);
         if (source) openEditOverlay(source);
       } else {
-        if (confirm(chrome.i18n.getMessage("ui_confirm_delete") || "Delete source and all items?")) {
+        if (confirm(t("ui_confirm_delete"))) {
           await DB.deleteSource(url);
           renderApp();
         }
@@ -374,7 +392,7 @@ async function detectAndAddFeed() {
     openEditOverlay({
       xmlUrl: finalUrl || origin,
       title: tab.title,
-      folder: "General",
+      folder: t("folder_general"),
       notify: true,
     });
   } catch (err) {
@@ -384,8 +402,8 @@ async function detectAndAddFeed() {
     // En cas d'erreur (page système Chrome), on ouvre quand même l'overlay vide
     openEditOverlay({
       xmlUrl: origin || "",
-      title: tab.title || "New Source",
-      folder: "General",
+      title: tab.title || t("source_new_title"),
+      folder: t("folder_general"),
       notify: true,
     });
   }
@@ -412,7 +430,7 @@ async function handleDialogSubmit(e) {
     await DB.putSource({
       xmlUrl: xmlUrl,
       title: document.getElementById("edit-name").value,
-      folder: document.getElementById("edit-folder").value || "General",
+      folder: document.getElementById("edit-folder").value || t("folder_general"),
       notify: document.getElementById("edit-notify").checked,
     });
     // On peut forcer un scan immédiat ici si besoin
@@ -426,7 +444,7 @@ async function handleDialogSubmit(e) {
 
 // Bouton supprimer dans l'overlay
 document.getElementById("delete-source").onclick = async () => {
-  if (confirm("Delete this source and all its items?")) {
+  if (confirm(t("ui_confirm_delete_full"))) {
     await DB.deleteSource(dialog.dataset.currentUrl);
     dialog.close();
     renderApp();

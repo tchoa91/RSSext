@@ -20,7 +20,7 @@
     "description": "Button to add the current website to sources"
   },
   "ui_no_items": {
-    "message": "No new updates.",
+    "message": "No new updates",
     "description": "Message shown when the queue is empty"
   },
   "ui_settings": {
@@ -30,5 +30,241 @@
   "ui_edit_source": {
     "message": "Edit Source",
     "description": "Title for the edit overlay"
+  },
+  "ui_edit": {
+    "message": "Edit",
+    "description": "Tooltip for edit button"
+  },
+  "ui_delete": {
+    "message": "Delete",
+    "description": "Tooltip for delete button"
+  },
+  "ui_save": {
+    "message": "Save",
+    "description": "Save button label"
+  },
+  "ui_confirm_delete": {
+    "message": "Delete source and all items?",
+    "description": "Confirmation alert"
+  },
+  "ui_confirm_delete_full": {
+    "message": "Delete this source and all its items?",
+    "description": "Confirmation alert in dialog"
+  },
+  "ui_confirm_clear_db": {
+    "message": "Are you sure you want to delete ALL sources and items? This cannot be undone.",
+    "description": "Confirmation for clearing database"
+  },
+  "welcome_title": {
+    "message": "Welcome !",
+    "description": "Welcome title in empty state"
+  },
+  "welcome_add": {
+    "message": "Start by adding the current page",
+    "description": "Instruction to add page"
+  },
+  "welcome_sources": {
+    "message": "or import your sources",
+    "description": "Instruction to add sources"
+  },
+  "btn_add": {
+    "message": "Add",
+    "description": "Add button label"
+  },
+  "btn_options": {
+    "message": "Options",
+    "description": "Options button label"
+  },
+  "folder_general": {
+    "message": "General",
+    "description": "Default folder name"
+  },
+  "folder_imported": {
+    "message": "Imported",
+    "description": "Default folder for imports"
+  },
+  "opml_export_title": {
+    "message": "RSSext Export",
+    "description": "Title in OPML file"
+  },
+  "error_opml_import": {
+    "message": "Error importing OPML file.",
+    "description": "Error message"
+  },
+  "notif_batch_title": {
+    "message": "$COUNT$ new updates in $SOURCE$",
+    "description": "Notification title for multiple items",
+    "placeholders": {
+      "count": { "content": "$1" },
+      "source": { "content": "$2" }
+    }
+  },
+  "ui_name": {
+    "message": "Name",
+    "description": "Label for source name input"
+  },
+  "ui_folder_label": {
+    "message": "Folder",
+    "description": "Label for folder input"
+  },
+  "ui_enable_notif": {
+    "message": "Enable Notifications",
+    "description": "Label for notifications checkbox"
+  },
+  "ui_delete_source": {
+    "message": "Delete Source",
+    "description": "Button to delete a source"
+  },
+  "ui_cancel": {
+    "message": "Cancel",
+    "description": "Cancel button"
+  },
+  "ui_toggle_view": {
+    "message": "Toggle View",
+    "description": "Tooltip for the view toggle button"
+  },
+  "footer_see_more": {
+    "message": "See more",
+    "description": "Link to author website"
+  },
+  "options_title": {
+    "message": "RSSext Settings",
+    "description": "Page title"
+  },
+  "options_header": {
+    "message": "RSSext Settings",
+    "description": "H1 header"
+  },
+  "options_legend_general": {
+    "message": "General",
+    "description": "Legend for general settings"
+  },
+  "options_label_interval": {
+    "message": "Update Interval",
+    "description": "Label for interval select"
+  },
+  "interval_5m": {
+    "message": "5 minutes",
+    "description": "Interval option"
+  },
+  "interval_15m": {
+    "message": "15 minutes",
+    "description": "Interval option"
+  },
+  "interval_30m": {
+    "message": "30 minutes",
+    "description": "Interval option"
+  },
+  "interval_1h": {
+    "message": "1 hour",
+    "description": "Interval option"
+  },
+  "interval_2h": {
+    "message": "2 hours",
+    "description": "Interval option"
+  },
+  "interval_12h": {
+    "message": "12 hours",
+    "description": "Interval option"
+  },
+  "interval_24h": {
+    "message": "24 hours",
+    "description": "Interval option"
+  },
+  "options_label_retention": {
+    "message": "Retention",
+    "description": "Label for retention select"
+  },
+  "retention_1d": {
+    "message": "1 day",
+    "description": "Retention option"
+  },
+  "retention_3d": {
+    "message": "3 days",
+    "description": "Retention option"
+  },
+  "retention_1w": {
+    "message": "1 week",
+    "description": "Retention option"
+  },
+  "retention_2w": {
+    "message": "2 weeks",
+    "description": "Retention option"
+  },
+  "retention_1m": {
+    "message": "1 month",
+    "description": "Retention option"
+  },
+  "retention_2m": {
+    "message": "2 months",
+    "description": "Retention option"
+  },
+  "retention_6m": {
+    "message": "6 months",
+    "description": "Retention option"
+  },
+  "retention_1y": {
+    "message": "1 year",
+    "description": "Retention option"
+  },
+  "options_label_notify": {
+    "message": "Enable Global Notifications",
+    "description": "Label for global notifications"
+  },
+  "options_legend_appearance": {
+    "message": "Appearance",
+    "description": "Legend for appearance settings"
+  },
+  "options_label_theme": {
+    "message": "Theme Color (Hue)",
+    "description": "Label for theme slider"
+  },
+  "options_label_zoom": {
+    "message": "Interface Zoom",
+    "description": "Label for zoom select"
+  },
+  "zoom_small": { "message": "Small" },
+  "zoom_medium": { "message": "Medium" },
+  "zoom_large": { "message": "Large" },
+  "options_legend_data": {
+    "message": "Data Management (OPML)",
+    "description": "Legend for data settings"
+  },
+  "options_desc_data": {
+    "message": "Import or export your feed list. Importing allows you to migrate from other readers.",
+    "description": "Description for data section"
+  },
+  "btn_import_opml": { "message": "Import OPML" },
+  "btn_export_opml": { "message": "Export OPML" },
+  "btn_delete_base": { "message": "Delete Base" },
+  "footer_credits": {
+    "message": "GPL 3.0 - 2026 - François Bacconnet -",
+    "description": "Footer credits text"
+  },
+  "folder_uncategorized": {
+    "message": "Uncategorized",
+    "description": "Default folder for export"
+  },
+  "notif_prefix_from": {
+    "message": "From: $SOURCE$",
+    "description": "Notification message prefix",
+    "placeholders": {
+      "source": { "content": "$1" }
+    }
+  },
+  "notif_prefix_latest": {
+    "message": "Latest: $TITLE$",
+    "description": "Notification message prefix",
+    "placeholders": {
+      "title": { "content": "$1" }
+    }
+  },
+  "item_no_title": {
+    "message": "No Title",
+    "description": "Fallback title for items"
+  },
+  "source_new_title": {
+    "message": "New Source",
+    "description": "Fallback title for new source"
   }
 }

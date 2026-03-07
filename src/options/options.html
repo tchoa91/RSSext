@@ -4,82 +4,85 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RSSext Settings</title>
+  <title data-i18n="options_title">RSSext Settings</title>
   <link rel="stylesheet" href="../common.css">
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>RSSext Settings</h1>
+      <h1 data-i18n="options_header">RSSext Settings</h1>
     </header>
 
     <main>
       <form id="settings-form">
         <fieldset>
-          <legend>General</legend>
+          <legend data-i18n="options_legend_general">General</legend>
           <label>
-            Update Interval:
+            <span data-i18n="options_label_interval">Update Interval</span>:
             <select id="setting-interval">
-              <option value="5">5 minutes</option>
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="60">1 hour</option>
-              <option value="120">2 hours</option>
-              <option value="720">12 hours</option>
-              <option value="1440">24 hours</option>
+              <option value="5" data-i18n="interval_5m">5 minutes</option>
+              <option value="15" data-i18n="interval_15m">15 minutes</option>
+              <option value="30" data-i18n="interval_30m">30 minutes</option>
+              <option value="60" data-i18n="interval_1h">1 hour</option>
+              <option value="120" data-i18n="interval_2h">2 hours</option>
+              <option value="720" data-i18n="interval_12h">12 hours</option>
+              <option value="1440" data-i18n="interval_24h">24 hours</option>
             </select>
           </label>
           <label>
-            Retention:
+            <span data-i18n="options_label_retention">Retention</span>:
             <select id="setting-ttl">
-              <option value="1">1 day</option>
-              <option value="3">3 days</option>
-              <option value="7">1 week</option>
-              <option value="14">2 weeks</option>
-              <option value="30">1 month</option>
-              <option value="60">2 months</option>
-              <option value="180">6 months</option>
-              <option value="365">1 year</option>
+              <option value="1" data-i18n="retention_1d">1 day</option>
+              <option value="3" data-i18n="retention_3d">3 days</option>
+              <option value="7" data-i18n="retention_1w">1 week</option>
+              <option value="14" data-i18n="retention_2w">2 weeks</option>
+              <option value="30" data-i18n="retention_1m">1 month</option>
+              <option value="60" data-i18n="retention_2m">2 months</option>
+              <option value="180" data-i18n="retention_6m">6 months</option>
+              <option value="365" data-i18n="retention_1y">1 year</option>
             </select>
           </label>
           <label class="checkbox-label">
-            <input type="checkbox" id="setting-notify"> Enable Global Notifications
+            <input type="checkbox" id="setting-notify"> <span data-i18n="options_label_notify">Enable Global Notifications</span>
           </label>
         </fieldset>
 
         <fieldset>
-          <legend>Appearance</legend>
+          <legend data-i18n="options_legend_appearance">Appearance</legend>
           <label>
-            Theme Color (Hue):
+            <span data-i18n="options_label_theme">Theme Color (Hue)</span>:
             <div class="range-wrapper">
               <input type="range" id="setting-hue" min="0" max="360" step="10">
               <span id="hue-value">210</span>
             </div>
           </label>
           <label>
-            Interface Zoom:
+            <span data-i18n="options_label_zoom">Interface Zoom</span>:
             <select id="setting-zoom">
-              <option value="small">Small</option>
-              <option value="medium" selected>Medium</option>
-              <option value="large">Large</option>
+              <option value="small" data-i18n="zoom_small">Small</option>
+              <option value="medium" selected data-i18n="zoom_medium">Medium</option>
+              <option value="large" data-i18n="zoom_large">Large</option>
             </select>
           </label>
         </fieldset>
 
         <fieldset>
-          <legend>Data Management (OPML)</legend>
-          <p class="description">Import or export your feed list. Importing allows you to migrate from other readers.</p>
+          <legend data-i18n="options_legend_data">Data Management (OPML)</legend>
+          <p class="description" data-i18n="options_desc_data">Import or export your feed list. Importing allows you to migrate from other readers.</p>
           <div class="data-actions">
-            <button type="button" id="btn-import-settings" class="primary">Import OPML</button>
-            <button type="button" id="btn-export-settings">Export OPML</button>
-            <button type="button" id="btn-delete-base" class="danger">Delete Base</button>
+            <button type="button" id="btn-import-settings" class="primary" data-i18n="btn_import_opml">Import OPML</button>
+            <button type="button" id="btn-export-settings" data-i18n="btn_export_opml">Export OPML</button>
+            <button type="button" id="btn-delete-base" class="danger" data-i18n="btn_delete_base">Delete Base</button>
             <!-- Input file caché -->
             <input type="file" id="input-import-settings" accept=".opml,.xml" style="display:none">
           </div>
         </fieldset>
       </form>
     </main>
+    <footer style="margin-top: 2rem; text-align: center; font-size: 0.75rem; opacity: 0.6;">
+      <span data-i18n="footer_credits">GPL 3.0 - 2026 - François Bacconnet -</span> <a href="https://ext.tchoa.com" target="_blank" data-i18n="footer_see_more">See more</a>
+    </footer>
   </div>
 
   <script type="module" src="options.js"></script>

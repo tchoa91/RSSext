@@ -112,7 +112,7 @@ function parseFeed(xmlString, xmlUrl) {
     const titleMatch = block.match(
       /<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/,
     );
-    const title = titleMatch ? titleMatch[1].trim() : "No Title";
+    const title = titleMatch ? titleMatch[1].trim() : chrome.i18n.getMessage("item_no_title");
 
     let link = "";
     const rssLinkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
@@ -139,9 +139,11 @@ function notifyUser(source, newItems) {
   const title =
     itemCount === 1
       ? newItems[0].title
-      : `${itemCount} new updates in ${source.title}`;
+      : chrome.i18n.getMessage("notif_batch_title", [String(itemCount), source.title]);
   const message =
-    itemCount === 1 ? `From: ${source.title}` : `Latest: ${newItems[0].title}`;
+    itemCount === 1
+      ? chrome.i18n.getMessage("notif_prefix_from", [source.title])
+      : chrome.i18n.getMessage("notif_prefix_latest", [newItems[0].title]);
 
   chrome.notifications.create(`rss-${source.xmlUrl}-${Date.now()}`, {
     type: "basic",
@@ -149,8 +151,8 @@ function notifyUser(source, newItems) {
     title: title,
     message: message,
     buttons: [
-      { title: chrome.i18n.getMessage("action_open") || "Open" },
-      { title: chrome.i18n.getMessage("action_discard") || "Discard" },
+      { title: chrome.i18n.getMessage("action_open") },
+      { title: chrome.i18n.getMessage("action_discard") },
     ],
     priority: 2,
   });

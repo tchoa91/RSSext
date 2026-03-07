@@ -3,7 +3,17 @@
  */
 import { DB } from "../db.js";
 
+const t = (key) => chrome.i18n.getMessage(key);
+
+function translateUI() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const msg = t(el.dataset.i18n);
+    if (msg) el.textContent = msg;
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  translateUI();
   // 1. Chargement des paramètres
   const defaults = {
     interval: 30,
@@ -72,13 +82,13 @@ function saveSingleSetting(key, value) {
 async function exportOPML() {
   const sources = await DB.getSources();
   const folders = sources.reduce((acc, src) => {
-    const f = src.folder || "Uncategorized";
+    const f = src.folder || t("folder_uncategorized");
     if (!acc[f]) acc[f] = [];
     acc[f].push(src);
     return acc;
   }, {});
 
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n<head><title>RSSext Export</title></head>\n<body>`;
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n<head><title>${t("opml_export_title")}</title></head>\n<body>`;
 
   for (const [folder, feeds] of Object.entries(folders)) {
     xml += `\n  <outline text="${folder.replace(/"/g, "&quot;")}">`;
@@ -119,7 +129,7 @@ async function importOPML(file) {
       if (!url) continue;
 
       const folderEl = el.parentElement.closest("outline:not([xmlUrl]):not([xmlURL])");
-      const folder = folderEl ? (folderEl.getAttribute("text") || folderEl.getAttribute("title")) : "Imported";
+      const folder = folderEl ? (folderEl.getAttribute("text") || folderEl.getAttribute("title")) : t("folder_imported");
       const title = el.getAttribute("text") || el.getAttribute("title") || url;
 
       await DB.putSource({
@@ -131,18 +141,16 @@ async function importOPML(file) {
       count++;
     }
 
-    alert(`${count} sources imported successfully.`);
     chrome.runtime.sendMessage({ action: "scan_now" });
   } catch (err) {
     console.error(err);
-    alert("Error importing OPML file.");
+    alert(t("error_opml_import"));
   }
 }
 
 async function deleteBase() {
-  if (confirm("Are you sure you want to delete ALL sources and items? This cannot be undone.")) {
+  if (confirm(t("ui_confirm_clear_db"))) {
     await DB.clearAll();
-    alert("Database cleared successfully.");
     // On notifie le background pour qu'il mette à jour le badge (0)
     chrome.runtime.sendMessage({ action: "scan_now" });
   }
