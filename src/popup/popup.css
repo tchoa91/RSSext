@@ -195,15 +195,16 @@ dialog select {
 }
 
 .folder-tag {
-  /* Par défaut, pas de style particulier */
+  background-color: rgba(128, 128, 128, 0.15);
+  color: var(--text-dim);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .folder-tag[style*="--hue"] {
   background-color: hsla(var(--hue), 75%, 50%, 0.15);
   color: hsl(var(--hue), 90%, 30%);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-weight: 500;
 }
 
 .source-header {

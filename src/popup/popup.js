@@ -485,10 +485,10 @@ function renderItemHtml(item, sourceInfo = null) {
   const timeAgo = formatTimeAgo(item.timestamp);
   let metaContent = timeAgo;
   if (sourceInfo) {
-    let folderHtml = sourceInfo.folder;
-    if (sourceInfo.hue !== null && sourceInfo.hue !== undefined) {
-      folderHtml = `<span class="folder-tag" style="--hue: ${sourceInfo.hue};">${sourceInfo.folder}</span>`;
-    }
+    const hueStyle = (sourceInfo.hue !== null && sourceInfo.hue !== undefined) 
+      ? `style="--hue: ${sourceInfo.hue};"` 
+      : "";
+    const folderHtml = `<span class="folder-tag" ${hueStyle}>${sourceInfo.folder}</span>`;
     metaContent = `${folderHtml} &bull; ${sourceInfo.title} &bull; ${timeAgo}`;
   }
   const metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${metaContent}</div>`;
