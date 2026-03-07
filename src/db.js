@@ -195,7 +195,7 @@ export const DB = {
     request.onsuccess = (event) => {
       const cursor = event.target.result;
       if (cursor) {
-        store.delete(cursor.primaryKey);
+        cursor.delete();
         cursor.continue(); // Continue vers l'élément suivant dans la plage
       }
     };

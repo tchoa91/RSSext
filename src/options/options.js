@@ -75,7 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function saveSingleSetting(key, value) {
   chrome.storage.local.set({ [key]: value }, () => {
-    chrome.runtime.sendMessage({ action: "update_settings" });
+    if (key === "interval" || key === "ttl") {
+      chrome.runtime.sendMessage({ action: "update_settings" });
+    }
   });
 }
 
