@@ -193,13 +193,19 @@ const NotificationSystem = {
     this.isProcessing = true;
     const { item, source, attempt } = this.queue.shift();
 
-    this.show(item, source, attempt);
-
-    // Throttling : on attend 2s avant de traiter le suivant
-    setTimeout(() => {
-      this.isProcessing = false;
-      this.processQueue();
-    }, 2000);
+    // Vérification ultime : l'article est-il toujours valide (non caché) ?
+    DB.getItems().then((items) => {
+      const dbItem = items.find((i) => i.id === item.id);
+      if (dbItem && !dbItem.hidden) {
+        this.show(item, source, attempt);
+      }
+    }).finally(() => {
+      // Throttling : on attend 2s avant de traiter le suivant
+      setTimeout(() => {
+        this.isProcessing = false;
+        this.processQueue();
+      }, 2000);
+    });
   },
 
   /**

@@ -7,8 +7,8 @@
   --surface: hsl(var(--main-hue), 15%, 92%);
   --text: hsl(var(--main-hue), 15%, 10%);
   --text-dim: hsl(var(--main-hue), 10%, 40%);
-  --accent: hsl(var(--main-hue), 80%, 40%);
-  --danger: hsl(0, 80%, 45%);
+  --accent: hsl(var(--main-hue), 80%, 60%);
+  --danger: hsl(19, 58%, 53%);
   --border: hsl(var(--main-hue), 10%, 80%);
 }
 

@@ -421,6 +421,11 @@ async function renderApp() {
     if (action === "discard" || action === "open") {
       if (action === "open") {
         e.preventDefault();
+        // Fix: On marque comme lu immédiatement car l'ouverture d'un onglet actif
+        // ferme la popup et tue le processus avant que le setTimeout ne s'exécute.
+        await DB.hideItem(id);
+        const background = e.ctrlKey || e.metaKey;
+        chrome.tabs.create({ url: btn.href, active: !background });
       }
 
       // Animation de sortie
@@ -428,7 +433,7 @@ async function renderApp() {
 
       // On attend la fin de l'animation CSS (300ms) avant de supprimer du DOM/DB
       setTimeout(async () => {
-        await DB.hideItem(id);
+        if (action === "discard") await DB.hideItem(id);
 
         const sourceGroup = row.closest(".source-group");
         const folderGroup = row.closest(".folder-group");
@@ -460,11 +465,6 @@ async function renderApp() {
           }
         }
       }, 300); // Correspond à la durée de transition CSS
-
-      if (action === "open") {
-        const background = e.ctrlKey || e.metaKey;
-        chrome.tabs.create({ url: btn.href, active: !background });
-      }
     }
   };
 }
