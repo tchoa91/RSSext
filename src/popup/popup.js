@@ -170,6 +170,17 @@ async function renderApp() {
   const items = allItems.filter((item) => !item.hidden);
   const sources = await DB.getSources();
 
+  // Pré-chargement des couleurs pour les dossiers
+  const uniqueFolders = [...new Set(sources.map(s => s.folder || t("folder_general")))];
+  const folderHues = {};
+  for (const f of uniqueFolders) {
+    if (f !== t("folder_general")) {
+      folderHues[f] = await DB.getFolderHue(f);
+    } else {
+      folderHues[f] = null;
+    }
+  }
+
   // --- GESTION DES BOUTONS D'ACTION (Header) ---
   const listActions = document.getElementById("list-actions");
   listActions.innerHTML = "";
@@ -232,7 +243,12 @@ async function renderApp() {
   }
 
   const sourceMap = sources.reduce((acc, s) => {
-    acc[s.xmlUrl] = { title: s.title, folder: s.folder || t("folder_general") };
+    const folderName = s.folder || t("folder_general");
+    acc[s.xmlUrl] = { 
+      title: s.title, 
+      folder: folderName,
+      hue: folderHues[folderName]
+    };
     return acc;
   }, {});
 
@@ -296,7 +312,7 @@ async function renderApp() {
 
     const sortedFolders = Object.keys(structure).sort();
 
-    feedList.innerHTML = sortedFolders.map(folder => {
+    feedList.innerHTML = sortedFolders.map((folder) => {
       const sourcesInFolder = structure[folder];
       // Tri des sources par titre
       const sortedSourceUrls = Object.keys(sourcesInFolder).sort((a, b) => {
@@ -336,12 +352,14 @@ async function renderApp() {
 
       const folderId = `folder:${folder}`;
       const isCollapsed = collapsedState[folderId] ? " collapsed" : "";
+      const hue = folderHues[folder];
+      const hueStyle = hue !== null ? `style="--hue: ${hue};"` : "";
 
       return `
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
             ${SVG_CHEVRON}
-            <span>${folder} (${folderCount})</span>
+            <span class="folder-tag" ${hueStyle}>${folder} (${folderCount})</span>
           </h3>
           <div class="group-content">
             ${sourcesHtml}
@@ -467,7 +485,11 @@ function renderItemHtml(item, sourceInfo = null) {
   const timeAgo = formatTimeAgo(item.timestamp);
   let metaContent = timeAgo;
   if (sourceInfo) {
-    metaContent = `${sourceInfo.folder} &bull; ${sourceInfo.title} &bull; ${timeAgo}`;
+    let folderHtml = sourceInfo.folder;
+    if (sourceInfo.hue !== null && sourceInfo.hue !== undefined) {
+      folderHtml = `<span class="folder-tag" style="--hue: ${sourceInfo.hue};">${sourceInfo.folder}</span>`;
+    }
+    metaContent = `${folderHtml} &bull; ${sourceInfo.title} &bull; ${timeAgo}`;
   }
   const metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${metaContent}</div>`;
 
@@ -648,6 +670,9 @@ async function handleDialogSubmit(e) {
 
   let folder = document.getElementById("edit-folder").value;
   if (folder === "__NEW__") folder = "";
+
+  // Si c'est un nouveau dossier, on s'assure qu'il a une couleur
+  if (folder) await DB.getFolderHue(folder);
 
   await DB.putSource({
     xmlUrl: newUrl,

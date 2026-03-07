@@ -194,6 +194,18 @@ dialog select {
   letter-spacing: 0.05em;
 }
 
+.folder-tag {
+  /* Par défaut, pas de style particulier */
+}
+
+.folder-tag[style*="--hue"] {
+  background-color: hsla(var(--hue), 75%, 50%, 0.15);
+  color: hsl(var(--hue), 90%, 30%);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
 .source-header {
   margin: 0.625rem 0.5rem 0.3rem;
   font-size: 0.8rem;
@@ -228,4 +240,10 @@ svg {
   width: 1em;
   height: 1em;
   vertical-align: middle;
+}
+
+@media (prefers-color-scheme: dark) {
+  .folder-tag[style*="--hue"] {
+    color: hsl(var(--hue), 90%, 75%);
+  }
 }

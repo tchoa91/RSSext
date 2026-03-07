@@ -15,6 +15,7 @@
 
 const DB_NAME = "RSSext_DB";
 const DB_VERSION = 1;
+const FOLDER_HUES = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
 
 export const DB = {
   /**
@@ -217,4 +218,30 @@ export const DB = {
       transaction.oncomplete = () => resolve(true);
     });
   },
+
+  /**
+   * --- GESTION DES COULEURS DE DOSSIER ---
+   */
+
+  /**
+   * Récupère ou assigne une couleur à un dossier.
+   * Stocké dans chrome.storage.local pour ne pas alourdir IndexedDB.
+   */
+  async getFolderHue(folderName) {
+    if (!folderName) return null; // "Général" reste sans couleur
+
+    const store = await chrome.storage.local.get("folder_colors");
+    const colors = store.folder_colors || {};
+
+    if (colors[folderName] !== undefined) {
+      return colors[folderName];
+    }
+
+    // Attribution d'une nouvelle couleur au hasard
+    const randomHue = FOLDER_HUES[Math.floor(Math.random() * FOLDER_HUES.length)];
+    colors[folderName] = randomHue;
+    
+    await chrome.storage.local.set({ folder_colors: colors });
+    return randomHue;
+  }
 };

@@ -134,6 +134,9 @@ async function importOPML(file) {
       const folder = folderEl ? (folderEl.getAttribute("text") || folderEl.getAttribute("title")) : t("folder_imported");
       const title = el.getAttribute("text") || el.getAttribute("title") || url;
 
+      // Génération de la couleur pour le dossier si nécessaire
+      if (folder) await DB.getFolderHue(folder);
+
       await DB.putSource({
         xmlUrl: url,
         title: title,
