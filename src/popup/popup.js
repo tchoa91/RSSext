@@ -12,6 +12,7 @@ const emptyState = document.getElementById("empty-state");
 const addBtn = document.getElementById("add-current");
 const dialog = document.getElementById("edit-dialog");
 const editForm = dialog.querySelector("form");
+const newFolderDialog = document.getElementById("new-folder-dialog");
 const openSettingsBtn = document.getElementById("open-settings");
 
 const SVG_CAT = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon icon-group-category">
@@ -91,6 +92,60 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Gestion de la fermeture du dialog
   editForm.addEventListener("submit", handleDialogSubmit);
 
+  // Gestion de l'ajout de dossier
+  const folderSelect = document.getElementById("edit-folder");
+  folderSelect.addEventListener("change", (e) => {
+    if (e.target.value === "__NEW__") {
+      document.getElementById("new-folder-name").value = "";
+      newFolderDialog.showModal();
+    }
+  });
+
+  newFolderDialog.addEventListener("close", () => {
+    if (folderSelect.value === "__NEW__") {
+      folderSelect.value = ""; // Revert si annulé
+    }
+  });
+
+  newFolderDialog.querySelector("form").addEventListener("submit", (e) => {
+    if (e.submitter.value === "save") {
+      const rawName = document.getElementById("new-folder-name").value;
+      const name = rawName.trim(); // Parsing simple
+      
+      if (name) {
+        // Ajout dynamique de l'option
+        let opt = Array.from(folderSelect.options).find(o => o.value === name);
+        if (!opt) {
+          opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          folderSelect.insertBefore(opt, folderSelect.lastElementChild);
+        }
+        folderSelect.value = name;
+      } else {
+        folderSelect.value = "";
+      }
+    }
+  });
+
+  // Validation avec Entrée dans le champ texte (évite le Cancel par défaut)
+  document.getElementById("new-folder-name").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      newFolderDialog.querySelector("button[value='save']").click();
+    }
+  });
+
+  // Validation avec Entrée dans les champs texte du dialog principal
+  ['edit-name', 'edit-url'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            dialog.querySelector("button[value='save']").click();
+        }
+    });
+  });
+
   // --- GESTION DES PARAMÈTRES ---
   openSettingsBtn.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
@@ -102,8 +157,9 @@ document.addEventListener("DOMContentLoaded", async () => {
  * Affiche les articles du buffer regroupés par source/dossier.
  */
 async function renderApp() {
-  const settings = await chrome.storage.local.get(["view_mode"]);
+  const settings = await chrome.storage.local.get(["view_mode", "collapsed"]);
   const viewMode = settings.view_mode || "date";
+  const collapsedState = settings.collapsed || {};
 
   if (toggleViewBtn) {
     toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;
@@ -193,9 +249,12 @@ async function renderApp() {
         const sourceItems = data.items.sort((a, b) => b.timestamp - a.timestamp);
         folderCount += sourceItems.length;
 
+        const sourceId = `source:${url}`;
+        const isCollapsed = collapsedState[sourceId] ? " collapsed" : "";
+
         return `
           <div class="source-group">
-            <h4 class="collapsible-header source-header">
+            <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
               ${SVG_CHEVRON}
               <span>${data.title} (${sourceItems.length})</span>
               <div class="source-actions">
@@ -214,9 +273,12 @@ async function renderApp() {
         `;
       }).join("");
 
+      const folderId = `folder:${folder}`;
+      const isCollapsed = collapsedState[folderId] ? " collapsed" : "";
+
       return `
         <div class="folder-group">
-          <h3 class="collapsible-header folder-header">
+          <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
             ${SVG_CHEVRON}
             <span>${folder} (${folderCount})</span>
           </h3>
@@ -256,6 +318,17 @@ async function renderApp() {
     const header = e.target.closest(".collapsible-header");
     if (header) {
       header.classList.toggle("collapsed");
+      const toggleId = header.dataset.toggleId;
+      if (toggleId) {
+        const s = await chrome.storage.local.get(["collapsed"]);
+        const c = s.collapsed || {};
+        if (header.classList.contains("collapsed")) {
+          c[toggleId] = true;
+        } else {
+          delete c[toggleId];
+        }
+        chrome.storage.local.set({ collapsed: c });
+      }
       return;
     }
 
@@ -311,11 +384,25 @@ async function renderApp() {
   };
 }
 
+function formatTimeAgo(timestamp) {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  let interval = Math.floor(seconds / 2592000);
+  if (interval >= 1) return interval + " mois";
+  interval = Math.floor(seconds / 86400);
+  if (interval >= 1) return interval + " j";
+  interval = Math.floor(seconds / 3600);
+  if (interval >= 1) return interval + " h";
+  interval = Math.floor(seconds / 60);
+  return (interval > 0 ? interval : 1) + " min";
+}
+
 function renderItemHtml(item, sourceInfo = null) {
-  let metaHtml = "";
+  const timeAgo = formatTimeAgo(item.timestamp);
+  let metaContent = timeAgo;
   if (sourceInfo) {
-    metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${sourceInfo.folder} &bull; ${sourceInfo.title}</div>`;
+    metaContent = `${sourceInfo.folder} &bull; ${sourceInfo.title} &bull; ${timeAgo}`;
   }
+  const metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${metaContent}</div>`;
 
   return `
     <div class="item-row" data-id="${item.id}">
@@ -392,7 +479,7 @@ async function detectAndAddFeed() {
     openEditOverlay({
       xmlUrl: finalUrl || origin,
       title: tab.title,
-      folder: t("folder_general"),
+      folder: "",
       notify: true,
     });
   } catch (err) {
@@ -403,7 +490,7 @@ async function detectAndAddFeed() {
     openEditOverlay({
       xmlUrl: origin || "",
       title: tab.title || t("source_new_title"),
-      folder: t("folder_general"),
+      folder: "",
       notify: true,
     });
   }
@@ -412,9 +499,35 @@ async function detectAndAddFeed() {
 /**
  * GESTION DE L'OVERLAY (Dialog)
  */
-function openEditOverlay(source) {
+async function openEditOverlay(source) {
   document.getElementById("edit-name").value = source.title;
-  document.getElementById("edit-folder").value = source.folder || "";
+  const urlInput = document.getElementById("edit-url");
+  if (urlInput) urlInput.value = source.xmlUrl;
+  
+  // Population du Select Dossier
+  const select = document.getElementById("edit-folder");
+  select.innerHTML = "";
+  
+  const optGen = document.createElement("option");
+  optGen.value = "";
+  optGen.textContent = t("folder_general");
+  select.appendChild(optGen);
+
+  const sources = await DB.getSources();
+  const folders = new Set(sources.map(s => s.folder).filter(f => f));
+  Array.from(folders).sort().forEach(f => {
+    const opt = document.createElement("option");
+    opt.value = f;
+    opt.textContent = f;
+    select.appendChild(opt);
+  });
+
+  const optNew = document.createElement("option");
+  optNew.value = "__NEW__";
+  optNew.textContent = `[ ${t("ui_add_folder_option")} ]`;
+  select.appendChild(optNew);
+
+  select.value = source.folder || "";
   document.getElementById("edit-notify").checked = source.notify;
 
   // On stocke l'URL dans le dataset du dialog pour le submit
@@ -424,15 +537,28 @@ function openEditOverlay(source) {
 
 async function handleDialogSubmit(e) {
   const action = e.submitter.value;
-  const xmlUrl = dialog.dataset.currentUrl;
+  const oldUrl = dialog.dataset.currentUrl;
 
   if (action === "save") {
+    const urlInput = document.getElementById("edit-url");
+    const newUrl = urlInput ? urlInput.value.trim() : oldUrl;
+    if (!newUrl) return;
+
+    let folder = document.getElementById("edit-folder").value;
+    if (folder === "__NEW__") folder = "";
+
     await DB.putSource({
-      xmlUrl: xmlUrl,
+      xmlUrl: newUrl,
       title: document.getElementById("edit-name").value,
-      folder: document.getElementById("edit-folder").value || t("folder_general"),
+      folder: folder,
       notify: document.getElementById("edit-notify").checked,
     });
+
+    // Si l'URL a changé, on supprime l'ancienne source pour éviter les doublons
+    if (oldUrl && newUrl !== oldUrl) {
+      await DB.deleteSource(oldUrl);
+    }
+
     // On peut forcer un scan immédiat ici si besoin
     chrome.runtime.getBackgroundPage
       ? null

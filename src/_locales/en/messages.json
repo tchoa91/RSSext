@@ -103,9 +103,17 @@
     "message": "Name",
     "description": "Label for source name input"
   },
+  "ui_url_label": {
+    "message": "URL",
+    "description": "Label for source URL input"
+  },
   "ui_folder_label": {
     "message": "Folder",
     "description": "Label for folder input"
+  },
+  "ui_add_folder_option": {
+    "message": "Add new folder...",
+    "description": "Option to create a new folder"
   },
   "ui_enable_notif": {
     "message": "Enable Notifications",

@@ -49,9 +49,12 @@
         <input type="text" id="edit-name" required>
       </label>
       <label>
+        <span data-i18n="ui_url_label">URL</span>:
+        <input type="text" id="edit-url" required>
+      </label>
+      <label>
         <span data-i18n="ui_folder_label">Folder</span>:
-        <input type="text" id="edit-folder" list="folder-suggestions">
-        <datalist id="folder-suggestions"></datalist>
+        <select id="edit-folder"></select>
       </label>
       <label>
         <input type="checkbox" id="edit-notify"> <span data-i18n="ui_enable_notif">Enable Notifications</span>
@@ -60,6 +63,17 @@
         <button type="button" id="delete-source" class="danger" data-i18n="ui_delete_source">Delete Source</button>
         <button type="submit" value="cancel" data-i18n="ui_cancel">Cancel</button>
         <button type="submit" value="save" class="primary" data-i18n="ui_save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="new-folder-dialog">
+    <form method="dialog">
+      <h3 data-i18n="ui_add_folder_option">Add New Folder</h3>
+      <input type="text" id="new-folder-name" required>
+      <div class="dialog-actions">
+        <button value="cancel" data-i18n="ui_cancel">Cancel</button>
+        <button value="save" class="primary" data-i18n="ui_save">Save</button>
       </div>
     </form>
   </dialog>
