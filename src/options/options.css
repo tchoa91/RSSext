@@ -55,3 +55,7 @@ input[type="range"] {
   display: flex;
   gap: 0.625rem;
 }
+
+select, input, button {
+  font-size: 0.8rem;
+}

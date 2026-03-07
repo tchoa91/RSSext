@@ -19,12 +19,29 @@
         <fieldset>
           <legend>General</legend>
           <label>
-            Update Interval (minutes):
-            <input type="number" id="setting-interval" min="5" max="1440">
+            Update Interval:
+            <select id="setting-interval">
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+              <option value="720">12 hours</option>
+              <option value="1440">24 hours</option>
+            </select>
           </label>
           <label>
-            Retention (days):
-            <input type="number" id="setting-ttl" min="1" max="365">
+            Retention:
+            <select id="setting-ttl">
+              <option value="1">1 day</option>
+              <option value="3">3 days</option>
+              <option value="7">1 week</option>
+              <option value="14">2 weeks</option>
+              <option value="30">1 month</option>
+              <option value="60">2 months</option>
+              <option value="180">6 months</option>
+              <option value="365">1 year</option>
+            </select>
           </label>
           <label class="checkbox-label">
             <input type="checkbox" id="setting-notify"> Enable Global Notifications
@@ -36,7 +53,7 @@
           <label>
             Theme Color (Hue):
             <div class="range-wrapper">
-              <input type="range" id="setting-hue" min="0" max="360">
+              <input type="range" id="setting-hue" min="0" max="360" step="10">
               <span id="hue-value">210</span>
             </div>
           </label>

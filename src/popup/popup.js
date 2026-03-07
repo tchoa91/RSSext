@@ -114,7 +114,21 @@ async function renderApp() {
     emptyState.classList.remove("hidden");
 
     if (sources.length === 0) {
-      emptyState.textContent = "Aucune source. Ajoutez un flux ou importez un OPML pour commencer.";
+      // On récupère les SVG directement depuis le DOM (header) pour ne pas les dupliquer en JS
+      const iconAdd = addBtn.innerHTML;
+      const iconSettings = openSettingsBtn.innerHTML;
+
+      emptyState.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px;">
+          <h2 style="margin: 0;">Welcome !</h2>
+          <p style="margin: 0;">Start by adding the current page</p>
+          <button id="btn-welcome-add" class="primary" style="gap: 5px;">${iconAdd} Add</button>
+          <p style="margin: 0;">or by adding your sources</p>
+          <button id="btn-welcome-options" style="gap: 5px;">${iconSettings} Options</button>
+        </div>
+      `;
+      document.getElementById("btn-welcome-add").onclick = detectAndAddFeed;
+      document.getElementById("btn-welcome-options").onclick = () => chrome.runtime.openOptionsPage();
     } else {
       emptyState.textContent = chrome.i18n.getMessage("ui_no_items") || "No new items";
     }
@@ -306,11 +320,17 @@ async function detectAndAddFeed() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
 
-  const urlObj = new URL(tab.url);
-  const origin = urlObj.origin;
+  let origin = "";
   let finalUrl = null;
 
   try {
+    if (!tab.url) throw new Error("Invalid URL");
+
+    const urlObj = new URL(tab.url);
+    origin = urlObj.origin;
+
+    if (!urlObj.protocol.startsWith("http")) throw new Error("System page");
+
     // ÉTAPE 1 : Détection par le code (le "Graal")
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -358,11 +378,13 @@ async function detectAndAddFeed() {
       notify: true,
     });
   } catch (err) {
-    console.error("RSSext: Erreur de détection", err);
+    if (err.message !== "System page" && err.message !== "Invalid URL") {
+      console.error("RSSext: Erreur de détection", err);
+    }
     // En cas d'erreur (page système Chrome), on ouvre quand même l'overlay vide
     openEditOverlay({
-      xmlUrl: origin,
-      title: "New Source",
+      xmlUrl: origin || "",
+      title: tab.title || "New Source",
       folder: "General",
       notify: true,
     });
