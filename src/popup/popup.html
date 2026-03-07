@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../common.css">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -60,55 +61,6 @@
         <button type="submit" value="cancel">Cancel</button>
         <button type="submit" value="save" class="primary">Save</button>
       </div>
-    </form>
-  </dialog>
-
-  <dialog id="settings-dialog">
-    <div class="dialog-header">
-      <h2>__MSG_ui_settings__</h2>
-      <button id="close-settings" title="Close">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-    <form>
-      
-      <fieldset>
-        <legend>General</legend>
-        <label>
-          Update Interval (minutes):
-          <input type="number" id="setting-interval" min="5" max="1440">
-        </label>
-        <label>
-          Retention (days):
-          <input type="number" id="setting-ttl" min="1" max="365">
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="setting-notify"> Enable Global Notifications
-        </label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Appearance</legend>
-        <label>
-          Theme Color (Hue):
-          <div class="range-wrapper">
-            <input type="range" id="setting-hue" min="0" max="360">
-            <span id="hue-value"></span>
-          </div>
-        </label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Data Management (OPML)</legend>
-        <div class="data-actions">
-          <button type="button" id="btn-import-settings">Import OPML</button>
-          <button type="button" id="btn-export-settings">Export OPML</button>
-          <input type="file" id="input-import-settings" accept=".opml,.xml" style="display:none">
-        </div>
-      </fieldset>
     </form>
   </dialog>
 

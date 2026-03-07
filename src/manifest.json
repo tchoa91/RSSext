@@ -31,5 +31,9 @@
       "128": "assets/icon128.png"
     }
   },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },  
   "offline_enabled": true
 }

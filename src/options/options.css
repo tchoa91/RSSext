@@ -1,0 +1,57 @@
+/* /home/tchoa/Dev/web/rssext/src/options/options.css */
+body {
+  padding: 20px;
+  background-color: var(--bg);
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--surface);
+  padding: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+header h1 {
+  margin-top: 0;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 15px;
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: var(--bg);
+}
+
+legend {
+  color: var(--accent);
+  font-weight: bold;
+  padding: 0 5px;
+}
+
+.range-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+input[type="range"] {
+  flex: 1;
+}
+
+.description {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.data-actions {
+  display: flex;
+  gap: 10px;
+}
