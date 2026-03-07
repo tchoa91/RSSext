@@ -163,6 +163,7 @@ async function renderApp() {
 
   if (toggleViewBtn) {
     toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;
+    toggleViewBtn.title = viewMode === "folder" ? t("ui_switch_to_date") : t("ui_switch_to_folder");
   }
 
   const allItems = await DB.getItems();
@@ -502,7 +503,10 @@ async function detectAndAddFeed() {
 async function openEditOverlay(source) {
   document.getElementById("edit-name").value = source.title;
   const urlInput = document.getElementById("edit-url");
-  if (urlInput) urlInput.value = source.xmlUrl;
+  if (urlInput) {
+    urlInput.value = source.xmlUrl;
+    urlInput.removeAttribute("required");
+  }
   
   // Population du Select Dossier
   const select = document.getElementById("edit-folder");
@@ -536,35 +540,65 @@ async function openEditOverlay(source) {
 }
 
 async function handleDialogSubmit(e) {
+  e.preventDefault();
   const action = e.submitter.value;
   const oldUrl = dialog.dataset.currentUrl;
 
-  if (action === "save") {
-    const urlInput = document.getElementById("edit-url");
-    const newUrl = urlInput ? urlInput.value.trim() : oldUrl;
-    if (!newUrl) return;
-
-    let folder = document.getElementById("edit-folder").value;
-    if (folder === "__NEW__") folder = "";
-
-    await DB.putSource({
-      xmlUrl: newUrl,
-      title: document.getElementById("edit-name").value,
-      folder: folder,
-      notify: document.getElementById("edit-notify").checked,
-    });
-
-    // Si l'URL a changé, on supprime l'ancienne source pour éviter les doublons
-    if (oldUrl && newUrl !== oldUrl) {
-      await DB.deleteSource(oldUrl);
-    }
-
-    // On peut forcer un scan immédiat ici si besoin
-    chrome.runtime.getBackgroundPage
-      ? null
-      : chrome.runtime.sendMessage({ action: "scan_now" });
+  if (action !== "save") {
+    dialog.close();
+    return;
   }
 
+  const urlInput = document.getElementById("edit-url");
+  const newUrl = urlInput ? urlInput.value.trim() : oldUrl;
+
+  if (!newUrl) {
+    if (urlInput) {
+      urlInput.setCustomValidity("URL required");
+      urlInput.reportValidity();
+      urlInput.addEventListener("input", () => urlInput.setCustomValidity(""), { once: true });
+    }
+    return;
+  }
+
+  const saveBtn = e.submitter;
+  saveBtn.disabled = true;
+  saveBtn.style.cursor = "wait";
+
+  try {
+    const check = await chrome.runtime.sendMessage({ action: "test_url", url: newUrl });
+    if (!check || !check.valid) {
+      if (urlInput) {
+        urlInput.setCustomValidity("Invalid URL");
+        urlInput.reportValidity();
+        urlInput.addEventListener("input", () => urlInput.setCustomValidity(""), { once: true });
+      }
+      return;
+    }
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.style.cursor = "";
+  }
+
+  let folder = document.getElementById("edit-folder").value;
+  if (folder === "__NEW__") folder = "";
+
+  await DB.putSource({
+    xmlUrl: newUrl,
+    title: document.getElementById("edit-name").value,
+    folder: folder,
+    notify: document.getElementById("edit-notify").checked,
+  });
+
+  if (oldUrl && newUrl !== oldUrl) {
+    await DB.deleteSource(oldUrl);
+  }
+
+  chrome.runtime.getBackgroundPage
+    ? null
+    : chrome.runtime.sendMessage({ action: "scan_now" });
+
+  dialog.close();
   renderApp();
 }
 

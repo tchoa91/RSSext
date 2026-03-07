@@ -1,6 +1,7 @@
 body {
   width: 28.125rem;
-  height: 36.25rem;
+  /* height: 36.25rem; */
+  height:600px;
   display: flex;
   flex-direction: column;
 }
@@ -112,6 +113,20 @@ fieldset {
   justify-content: flex-end;
   gap: 0.625rem;
   margin-top: 1.25rem;
+}
+
+/* Champs de formulaire dans les dialogs */
+dialog input,
+dialog select {
+  font-size: 1rem; /* Suit le zoom de l'interface */
+  /* width: 100%; */
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  background: var(--bg);
+  color: var(--text);
+  box-sizing: border-box;
+  margin-top: 0.25rem;
 }
 
 #empty-state {

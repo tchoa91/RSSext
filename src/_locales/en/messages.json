@@ -127,9 +127,13 @@
     "message": "Cancel",
     "description": "Cancel button"
   },
-  "ui_toggle_view": {
-    "message": "Toggle View",
-    "description": "Tooltip for the view toggle button"
+  "ui_switch_to_date": {
+    "message": "Switch to date sorted view",
+    "description": "Tooltip to switch to date view"
+  },
+  "ui_switch_to_folder": {
+    "message": "Switch to category sorted view",
+    "description": "Tooltip to switch to folder view"
   },
   "footer_see_more": {
     "message": "See more",

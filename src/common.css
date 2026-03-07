@@ -49,12 +49,18 @@ button {
 
 /* Formulaires & Inputs */
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+select {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 0.5rem;
   border-radius: 0.25rem;
+}
+
+input[type="checkbox"],
+input[type="range"] {
+  accent-color: var(--accent);
 }
 
 input[type="text"] {
@@ -89,6 +95,15 @@ button.danger {
   color: var(--danger);
   padding: 0.5rem 0.95rem;
   border-radius: 0.25rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 /* Utilitaires */
