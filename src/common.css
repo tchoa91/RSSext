@@ -53,8 +53,8 @@ input[type="number"] {
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 8px;
-  border-radius: 4px;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
 }
 
 input[type="text"] {
@@ -64,13 +64,13 @@ input[type="text"] {
 
 label {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 0.625rem;
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   cursor: pointer;
 }
 
@@ -79,16 +79,16 @@ button.primary {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 8px 15px;
-  border-radius: 4px;
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.25rem;
 }
 
 button.danger {
   background: none;
   border: 1px solid var(--danger);
   color: var(--danger);
-  padding: 8px 15px;
-  border-radius: 4px;
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.25rem;
 }
 
 /* Utilitaires */

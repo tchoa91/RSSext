@@ -45,7 +45,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 async function performScan() {
   try {
     // Récupération de la config
-    const config = await chrome.storage.sync.get(["ttl", "notify"]);
+    const config = await chrome.storage.local.get(["ttl", "notify"]);
     const ttl = config.ttl || DEFAULT_TTL;
 
     // 1. Purge du buffer (TTL) avant de commencer
@@ -201,7 +201,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === "update_settings") {
     console.log("RSSext: Settings updated. Refreshing alarm...");
-    chrome.storage.sync.get(["interval"], (res) => {
+    chrome.storage.local.get(["interval"], (res) => {
       const interval = res.interval || DEFAULT_INTERVAL;
       chrome.alarms.create("rss-scan-alarm", { periodInMinutes: interval });
     });

@@ -41,14 +41,18 @@ const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12
  * INITIALISATION
  */
 document.addEventListener("DOMContentLoaded", async () => {
-  if (!localStorage.getItem("view_mode")) {
-    localStorage.setItem("view_mode", "date");
-  }
-
   // Application du thème sauvegardé au démarrage
-  chrome.storage.sync.get(["hue"], (result) => {
+  chrome.storage.local.get(["hue", "zoom"], (result) => {
     if (result.hue) {
       document.documentElement.style.setProperty("--main-hue", result.hue);
+    }
+    if (result.zoom) {
+      const zoomMap = {
+        small: "100%",
+        medium: "120%",
+        large: "150%"
+      };
+      document.documentElement.style.fontSize = zoomMap[result.zoom] || "100%";
     }
   });
 
@@ -58,9 +62,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   addBtn.addEventListener("click", detectAndAddFeed);
 
   if (toggleViewBtn) {
-    toggleViewBtn.addEventListener("click", () => {
-      const current = localStorage.getItem("view_mode") || "date";
-      localStorage.setItem("view_mode", current === "date" ? "folder" : "date");
+    toggleViewBtn.addEventListener("click", async () => {
+      const settings = await chrome.storage.local.get(["view_mode"]);
+      const current = settings.view_mode || "date";
+      await chrome.storage.local.set({ view_mode: current === "date" ? "folder" : "date" });
       renderApp();
     });
   }
@@ -79,7 +84,8 @@ document.addEventListener("DOMContentLoaded", async () => {
  * Affiche les articles du buffer regroupés par source/dossier.
  */
 async function renderApp() {
-  const viewMode = localStorage.getItem("view_mode") || "date";
+  const settings = await chrome.storage.local.get(["view_mode"]);
+  const viewMode = settings.view_mode || "date";
 
   if (toggleViewBtn) {
     toggleViewBtn.innerHTML = viewMode === "folder" ? SVG_CAT : SVG_DATE;

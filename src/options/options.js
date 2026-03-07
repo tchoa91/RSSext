@@ -9,10 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
     interval: 30,
     ttl: 30,
     notify: true,
-    hue: 210
+    hue: 210,
+    zoom: "small"
   };
 
-  chrome.storage.sync.get(["interval", "ttl", "notify", "hue"], (result) => {
+  chrome.storage.local.get(["interval", "ttl", "notify", "hue", "zoom"], (result) => {
     const settings = { ...defaults, ...result };
     
     document.getElementById("setting-interval").value = settings.interval;
@@ -20,9 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("setting-notify").checked = settings.notify;
     document.getElementById("setting-hue").value = settings.hue;
     document.getElementById("hue-value").textContent = settings.hue;
+    document.getElementById("setting-zoom").value = settings.zoom;
 
     // Appliquer le thème immédiatement à la page d'options
     document.documentElement.style.setProperty("--main-hue", settings.hue);
+    applyZoom(settings.zoom);
   });
 
   // 2. Sauvegarde automatique
@@ -30,7 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "setting-interval", key: "interval", type: "int" },
     { id: "setting-ttl", key: "ttl", type: "int" },
     { id: "setting-notify", key: "notify", type: "bool" },
-    { id: "setting-hue", key: "hue", type: "value" }
+    { id: "setting-hue", key: "hue", type: "value" },
+    { id: "setting-zoom", key: "zoom", type: "value" }
   ];
 
   settingInputs.forEach(input => {
@@ -41,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (input.type === "bool") value = e.target.checked;
       
       saveSingleSetting(input.key, value);
+      if (input.key === "zoom") applyZoom(value);
     });
   });
 
@@ -55,10 +60,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-export-settings").onclick = exportOPML;
   document.getElementById("btn-import-settings").onclick = () => document.getElementById("input-import-settings").click();
   document.getElementById("input-import-settings").onchange = (e) => importOPML(e.target.files[0]);
+  document.getElementById("btn-delete-base").onclick = deleteBase;
 });
 
 function saveSingleSetting(key, value) {
-  chrome.storage.sync.set({ [key]: value }, () => {
+  chrome.storage.local.set({ [key]: value }, () => {
     chrome.runtime.sendMessage({ action: "update_settings" });
   });
 }
@@ -102,6 +108,10 @@ async function importOPML(file) {
     const doc = parser.parseFromString(text, "text/html");
     
     const outlines = doc.querySelectorAll("outline[xmlUrl], outline[xmlURL]");
+
+    if (outlines.length > 0) {
+      await DB.clearAll();
+    }
     
     let count = 0;
     for (const el of outlines) {
@@ -127,4 +137,22 @@ async function importOPML(file) {
     console.error(err);
     alert("Error importing OPML file.");
   }
+}
+
+async function deleteBase() {
+  if (confirm("Are you sure you want to delete ALL sources and items? This cannot be undone.")) {
+    await DB.clearAll();
+    alert("Database cleared successfully.");
+    // On notifie le background pour qu'il mette à jour le badge (0)
+    chrome.runtime.sendMessage({ action: "scan_now" });
+  }
+}
+
+function applyZoom(level) {
+  const zoomMap = {
+    small: "100%",
+    medium: "120%",
+    large: "150%"
+  };
+  document.documentElement.style.fontSize = zoomMap[level] || "100%";
 }

@@ -40,6 +40,14 @@
               <span id="hue-value">210</span>
             </div>
           </label>
+          <label>
+            Interface Zoom:
+            <select id="setting-zoom">
+              <option value="small">Small</option>
+              <option value="medium" selected>Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </label>
         </fieldset>
 
         <fieldset>
@@ -48,6 +56,7 @@
           <div class="data-actions">
             <button type="button" id="btn-import-settings" class="primary">Import OPML</button>
             <button type="button" id="btn-export-settings">Export OPML</button>
+            <button type="button" id="btn-delete-base" class="danger">Delete Base</button>
             <!-- Input file caché -->
             <input type="file" id="input-import-settings" accept=".opml,.xml" style="display:none">
           </div>

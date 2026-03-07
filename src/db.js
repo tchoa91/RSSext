@@ -204,4 +204,17 @@ export const DB = {
       transaction.oncomplete = () => resolve(true);
     });
   },
+
+  /**
+   * Vide intégralement les sources et les items.
+   */
+  async clearAll() {
+    const db = await this.open();
+    const transaction = db.transaction(["sources", "items"], "readwrite");
+    transaction.objectStore("sources").clear();
+    transaction.objectStore("items").clear();
+    return new Promise((resolve) => {
+      transaction.oncomplete = () => resolve(true);
+    });
+  },
 };
