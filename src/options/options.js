@@ -90,19 +90,46 @@ async function exportOPML() {
     return acc;
   }, {});
 
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n<head><title>${t("opml_export_title")}</title></head>\n<body>`;
+  // 1. Création d'un document XML vierge
+  const doc = document.implementation.createDocument(null, "opml", null);
+  const opml = doc.documentElement;
+  opml.setAttribute("version", "2.0");
 
-  for (const [folder, feeds] of Object.entries(folders)) {
-    xml += `\n  <outline text="${folder.replace(/"/g, "&quot;")}">`;
+  // 2. Construction du <head>
+  const head = doc.createElement("head");
+  const title = doc.createElement("title");
+  title.textContent = t("opml_export_title");
+  head.appendChild(title);
+  opml.appendChild(head);
+
+  // 3. Construction du <body>
+  const body = doc.createElement("body");
+  
+  for (const [folderName, feeds] of Object.entries(folders)) {
+    const folderOutline = doc.createElement("outline");
+    folderOutline.setAttribute("text", folderName);
+    // Optionnel mais recommandé en OPML pour les dossiers :
+    // folderOutline.setAttribute("title", folderName);
+
     feeds.forEach((f) => {
-      xml += `\n    <outline type="rss" text="${f.title.replace(/"/g, "&quot;")}" xmlUrl="${f.xmlUrl}" />`;
+      const feedOutline = doc.createElement("outline");
+      feedOutline.setAttribute("type", "rss");
+      feedOutline.setAttribute("text", f.title);
+      feedOutline.setAttribute("xmlUrl", f.xmlUrl);
+      folderOutline.appendChild(feedOutline);
     });
-    xml += `\n  </outline>`;
+
+    body.appendChild(folderOutline);
   }
+  opml.appendChild(body);
 
-  xml += `\n</body>\n</opml>`;
+  // 4. Sérialisation propre
+  const serializer = new XMLSerializer();
+  // Le serializer n'inclut pas le prologue XML, il faut l'ajouter manuellement
+  const xmlString = '<?xml version="1.0" encoding="UTF-8"?>\n' + serializer.serializeToString(doc);
 
-  const blob = new Blob([xml], { type: "text/xml" });
+  // Déclenchement du téléchargement (inchangé)
+  const blob = new Blob([xmlString], { type: "text/xml" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -117,38 +144,65 @@ async function importOPML(file) {
   try {
     const text = await file.text();
     const parser = new DOMParser();
-    const doc = parser.parseFromString(text, "text/html");
     
-    const outlines = doc.querySelectorAll("outline[xmlUrl], outline[xmlURL]");
+    // 1. Parsing strict en XML (adieu le mode HTML tolérant mais capricieux)
+    const doc = parser.parseFromString(text, "text/xml");
+    
+    // Détection immédiate d'un XML invalide
+    const parseError = doc.querySelector("parsererror");
+    if (parseError) {
+      throw new Error("Le fichier OPML n'est pas un document XML valide.");
+    }
+    
+    // 2. On récupère tous les flux RSS. Le XML respectant la casse, xmlUrl suffit.
+    const outlines = doc.querySelectorAll("outline[xmlUrl]");
 
+    // Si on a trouvé des flux, on vide la base existante
     if (outlines.length > 0) {
       await DB.clearAll();
     }
     
     let count = 0;
     for (const el of outlines) {
-      const url = el.getAttribute("xmlUrl") || el.getAttribute("xmlURL");
+      const url = el.getAttribute("xmlUrl");
       if (!url) continue;
 
-      const folderEl = el.parentElement.closest("outline:not([xmlUrl]):not([xmlURL])");
-      const folder = folderEl ? (folderEl.getAttribute("text") || folderEl.getAttribute("title")) : t("folder_imported");
+      // 3. Recherche du dossier de 1er niveau (Top-level folder)
+      let currentParent = el.parentElement;
+      let topFolderEl = null;
+
+      // On remonte l'arbre DOM tant que le parent est une balise <outline>.
+      // Le dernier trouvé juste avant le <body> sera notre dossier racine.
+      while (currentParent && currentParent.tagName.toLowerCase() === "outline") {
+        topFolderEl = currentParent;
+        currentParent = currentParent.parentElement;
+      }
+
+      // 4. Extraction du nom, ou chaîne vide pour retomber dans la catégorie "Général"
+      const folder = topFolderEl 
+        ? (topFolderEl.getAttribute("text") || topFolderEl.getAttribute("title") || "") 
+        : "";
+
       const title = el.getAttribute("text") || el.getAttribute("title") || url;
 
-      // Génération de la couleur pour le dossier si nécessaire
+      // 5. Attribution d'une couleur au dossier (si ce n'est pas la catégorie générale)
       if (folder) await DB.getFolderHue(folder);
 
+      // 6. Sauvegarde en base
       await DB.putSource({
         xmlUrl: url,
         title: title,
         folder: folder,
-        notify: true,
+        notify: true, // Activé par défaut à l'import
       });
       count++;
     }
 
+    // 7. Relance du worker pour récupérer immédiatement les nouveaux articles
     chrome.runtime.sendMessage({ action: "scan_now" });
+    
   } catch (err) {
-    console.error(err);
+    console.error("Erreur d'import OPML :", err);
     alert(t("error_opml_import"));
   }
 }

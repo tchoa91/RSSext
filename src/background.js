@@ -81,6 +81,7 @@ async function performScan() {
     for (const source of sources) {
       try {
         const response = await fetch(source.xmlUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const xmlText = await response.text();
 
         const freshItems = parseFeed(xmlText, source.xmlUrl, ttl);
@@ -102,8 +103,17 @@ async function performScan() {
             });
           }
         }
+
+        // Si la source avait une erreur précédemment, on la nettoie
+        if (source.error) {
+          delete source.error;
+          await DB.putSource(source);
+        }
       } catch (err) {
         console.error(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
+        // On enregistre l'erreur dans la source pour l'afficher dans l'UI
+        source.error = err.message || "Unknown error";
+        await DB.putSource(source);
       }
     }
     await updateBadge();

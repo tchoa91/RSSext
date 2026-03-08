@@ -235,6 +235,12 @@ dialog select {
   color: var(--danger);
 }
 
+.icon-error {
+  color: var(--danger);
+  margin-left: 0.3rem;
+  cursor: help;
+}
+
 /* --- Gestion des icônes SVG (Support du Zoom) --- */
 /* Force les SVGs à suivre la taille du texte environnant */
 svg {

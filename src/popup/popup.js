@@ -41,9 +41,21 @@ const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12
 const SVG_CHECK_ALL = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L7 17l-5-5"></path><path d="M22 10l-7.5 7.5L13 16"></path></svg>`;
 const SVG_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
 const SVG_COLLAPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
 // Raccourci i18n
 const t = (key) => chrome.i18n.getMessage(key);
+
+// Sécurisation contre les injections HTML (XSS)
+const escapeHtml = (str) => {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
 
 /**
  * Traduit les éléments HTML ayant un attribut data-i18n
@@ -297,7 +309,7 @@ async function renderApp() {
       const f = s.folder || t("folder_general");
       if (!structure[f]) structure[f] = {};
       // On utilise l'URL comme clé unique
-      structure[f][s.xmlUrl] = { title: s.title, url: s.xmlUrl, items: [] };
+      structure[f][s.xmlUrl] = { title: s.title, url: s.xmlUrl, items: [], error: s.error };
       urlToFolder[s.xmlUrl] = f;
     });
 
@@ -329,11 +341,13 @@ async function renderApp() {
         const sourceId = `source:${url}`;
         const isCollapsed = collapsedState[sourceId] ? " collapsed" : "";
 
+        const errorHtml = data.error ? `<span class="icon-error" title="${escapeHtml(data.error)}">${SVG_ALERT}</span>` : "";
+
         return `
           <div class="source-group">
             <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
               ${SVG_CHEVRON}
-              <span>${data.title} (${sourceItems.length})</span>
+              <span>${escapeHtml(data.title)} (${sourceItems.length}) ${errorHtml}</span>
               <div class="source-actions">
                 <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
                   ${SVG_EDIT}
@@ -359,7 +373,7 @@ async function renderApp() {
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
             ${SVG_CHEVRON}
-            <span class="folder-tag" ${hueStyle}>${folder} (${folderCount})</span>
+            <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} (${folderCount})</span>
           </h3>
           <div class="group-content">
             ${sourcesHtml}
@@ -488,16 +502,16 @@ function renderItemHtml(item, sourceInfo = null) {
     const hueStyle = (sourceInfo.hue !== null && sourceInfo.hue !== undefined) 
       ? `style="--hue: ${sourceInfo.hue};"` 
       : "";
-    const folderHtml = `<span class="folder-tag" ${hueStyle}>${sourceInfo.folder}</span>`;
-    metaContent = `${folderHtml} &bull; ${sourceInfo.title} &bull; ${timeAgo}`;
+    const folderHtml = `<span class="folder-tag" ${hueStyle}>${escapeHtml(sourceInfo.folder)}</span>`;
+    metaContent = `${folderHtml} &bull; ${escapeHtml(sourceInfo.title)} &bull; ${timeAgo}`;
   }
   const metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${metaContent}</div>`;
 
   return `
     <div class="item-row" data-id="${item.id}">
       <div style="flex: 1; min-width: 0; margin-right: 10px;">
-        <a href="${item.link}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
-          ${item.title}
+        <a href="${escapeHtml(item.link)}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
+          ${escapeHtml(item.title)}
         </a>
         ${metaHtml}
       </div>
