@@ -3,11 +3,11 @@
   --main-hue: 210; /* Bleu par défaut */
 
   /* Couleurs Mode Clair */
-  --bg: hsl(var(--main-hue), 10%, 98%);
-  --surface: hsl(var(--main-hue), 15%, 92%);
+  --bg: hsl(var(--main-hue), 10%, 93%);
+  --surface: hsl(var(--main-hue), 15%, 91%);
   --text: hsl(var(--main-hue), 15%, 10%);
   --text-dim: hsl(var(--main-hue), 10%, 40%);
-  --accent: hsl(var(--main-hue), 80%, 60%);
+  --accent: hsl(var(--main-hue), 50%, 20%);
   --danger: hsl(19, 58%, 53%);
   --border: hsl(var(--main-hue), 10%, 80%);
 }
@@ -15,10 +15,10 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: hsl(var(--main-hue), 15%, 7%);
-    --surface: hsl(var(--main-hue), 15%, 12%);
+    --surface: hsl(var(--main-hue), 15%, 9%);
     --text: hsl(var(--main-hue), 10%, 90%);
-    --text-dim: hsl(var(--main-hue), 10%, 60%);
-    --accent: hsl(var(--main-hue), 70%, 55%);
+    --text-dim: hsl(var(--main-hue), 5%, 60%);
+    --accent: hsl(var(--main-hue), 50%, 80%);
     --border: hsl(var(--main-hue), 10%, 25%);
   }
 }
@@ -71,6 +71,8 @@ input[type="text"] {
 label {
   display: block;
   margin-bottom: 0.625rem;
+  font-size: 1rem;
+  color: var(--text-dim);
 }
 
 .checkbox-label {
@@ -83,8 +85,9 @@ label {
 /* Boutons standards */
 button.primary {
   background: var(--accent);
-  color: white;
+  color: var(--surface);
   border: none;
+  font-weight: bold;
   padding: 0.5rem 0.95rem;
   border-radius: 0.25rem;
 }

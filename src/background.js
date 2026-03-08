@@ -110,7 +110,7 @@ async function performScan() {
           await DB.putSource(source);
         }
       } catch (err) {
-        console.error(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
+        console.warn(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
         // On enregistre l'erreur dans la source pour l'afficher dans l'UI
         source.error = err.message || "Unknown error";
         await DB.putSource(source);
