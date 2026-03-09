@@ -160,6 +160,7 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
     }
 
     if (link) {
+      link = decodeEntities(link);
       const id = btoa(link).substring(0, 32);
       items.push({ id, xmlUrl, title, link, timestamp: pubDate }); // On stocke la vraie date !
     }
@@ -271,7 +272,7 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
   const item = items.find((i) => i.id === itemId);
   
   if (item) {
-    chrome.tabs.create({ url: item.link });
+    chrome.tabs.create({ url: addRef(item.link) });
     await DB.hideItem(itemId);
     updateBadge();
   }
@@ -289,7 +290,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
     // OPEN
     const items = await DB.getItems();
     const item = items.find((i) => i.id === itemId);
-    if (item) chrome.tabs.create({ url: item.link });
+    if (item) chrome.tabs.create({ url: addRef(item.link) });
   }
   
   // DANS TOUS LES CAS (Open ou Discard) -> On cache l'item
@@ -389,4 +390,17 @@ function decodeEntities(str) {
     };
     return named[entity] || match;
   });
+}
+
+/**
+ * Ajoute la signature RSSext à l'URL
+ */
+function addRef(url) {
+  try {
+    const urlObj = new URL(url);
+    urlObj.searchParams.set("utm_source", "RSSext");
+    return urlObj.toString();
+  } catch (e) {
+    return url;
+  }
 }

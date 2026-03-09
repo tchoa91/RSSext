@@ -511,7 +511,7 @@ function renderItemHtml(item, sourceInfo = null) {
   return `
     <div class="item-row" data-id="${item.id}">
       <div style="flex: 1; min-width: 0; margin-right: 10px;">
-        <a href="${escapeHtml(item.link)}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
+        <a href="${escapeHtml(addRef(item.link))}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
           ${escapeHtml(item.title)}
         </a>
         ${metaHtml}
@@ -716,3 +716,16 @@ document.getElementById("delete-source").onclick = async () => {
     renderApp();
   }
 };
+
+/**
+ * Ajoute la signature RSSext à l'URL
+ */
+function addRef(url) {
+  try {
+    const urlObj = new URL(url);
+    urlObj.searchParams.set("utm_source", "RSSext");
+    return urlObj.toString();
+  } catch (e) {
+    return url;
+  }
+}
