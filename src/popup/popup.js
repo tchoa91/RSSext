@@ -341,13 +341,14 @@ async function renderApp() {
 
         const sourceId = `source:${url}`;
         const isCollapsed = collapsedState[sourceId] ? " collapsed" : "";
+        const ariaExpanded = collapsedState[sourceId] ? "false" : "true";
 
         const errorHtml = data.error ? `<span class="icon-error" title="${escapeHtml(data.error)}">${SVG_ALERT}</span>` : "";
 
         return `
           <div class="source-group">
             <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
-              ${SVG_CHEVRON}
+              <button class="chevron-btn" aria-expanded="${ariaExpanded}" style="cursor: pointer; display: inline-flex; background: none; border: none; padding: 0; color: inherit;">${SVG_CHEVRON}</button>
               <span>${escapeHtml(data.title)} (${sourceItems.length}) ${errorHtml}</span>
               <div class="source-actions">
                 <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
@@ -367,13 +368,14 @@ async function renderApp() {
 
       const folderId = `folder:${folder}`;
       const isCollapsed = collapsedState[folderId] ? " collapsed" : "";
+      const ariaExpanded = collapsedState[folderId] ? "false" : "true";
       const hue = folderHues[folder];
       const hueStyle = hue !== null ? `style="--hue: ${hue};"` : "";
 
       return `
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
-            ${SVG_CHEVRON}
+            <button class="chevron-btn" aria-expanded="${ariaExpanded}" style="cursor: pointer; display: inline-flex; background: none; border: none; padding: 0; color: inherit;">${SVG_CHEVRON}</button>
             <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} (${folderCount})</span>
           </h3>
           <div class="group-content">
@@ -412,6 +414,11 @@ async function renderApp() {
     const header = e.target.closest(".collapsible-header");
     if (header) {
       header.classList.toggle("collapsed");
+      const isCollapsed = header.classList.contains("collapsed");
+      
+      const chevron = header.querySelector(".chevron-btn");
+      if (chevron) chevron.setAttribute("aria-expanded", !isCollapsed);
+
       const toggleId = header.dataset.toggleId;
       if (toggleId) {
         const s = await chrome.storage.local.get(["collapsed"]);

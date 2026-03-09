@@ -106,6 +106,9 @@ async function exportOPML() {
   head.appendChild(title);
   opml.appendChild(head);
 
+  // Ajout d'un commentaire discret pour identifier la source de l'export
+  opml.appendChild(doc.createComment(" exported by RSSext "));
+
   // 3. Construction du <body>
   const body = doc.createElement("body");
   
