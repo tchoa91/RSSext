@@ -16,7 +16,7 @@ body {
 header h1 {
   margin-top: 0;
   color: var(--accent);
-  border-bottom: 1px solid var(--border);
+  /* border-bottom: 1px solid var(--border); */
   padding-bottom: 0.95rem;
   display: flex;
   align-items: center;
@@ -33,7 +33,7 @@ fieldset {
   border-radius: 0.375rem;
   padding: 1.25rem;
   margin-bottom: 1.25rem;
-  background: var(--bg);
+  background: linear-gradient(160deg, var(--bg) 85%, hsla(var(--main-hue), 40%, 40%, 0.15));
 }
 
 legend {

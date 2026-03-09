@@ -90,6 +90,11 @@ button.primary {
   font-weight: bold;
   padding: 0.5rem 0.95rem;
   border-radius: 0.25rem;
+  transition: opacity 0.2s;
+}
+
+button.primary:hover {
+  opacity: 0.9;
 }
 
 button.danger {
@@ -98,6 +103,28 @@ button.danger {
   color: var(--danger);
   padding: 0.5rem 0.95rem;
   border-radius: 0.25rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+button.danger:hover {
+  background-color: hsla(19, 58%, 53%, 0.1);
+}
+
+/* Boutons secondaires (Cancel, Export, etc.) */
+button.secondary,
+.dialog-actions button:not(.primary):not(.danger),
+.data-actions button:not(.primary):not(.danger) {
+  border: 1px solid var(--text);
+  color: var(--text);
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+button.secondary:hover,
+.dialog-actions button:not(.primary):not(.danger):hover,
+.data-actions button:not(.primary):not(.danger):hover {
+  background-color: hsla(var(--main-hue), 15%, 50%, 0.15);
 }
 
 a {
