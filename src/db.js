@@ -214,9 +214,14 @@ export const DB = {
     const transaction = db.transaction(["sources", "items"], "readwrite");
     transaction.objectStore("sources").clear();
     transaction.objectStore("items").clear();
-    return new Promise((resolve) => {
+
+    const idbPromise = new Promise((resolve) => {
       transaction.oncomplete = () => resolve(true);
     });
+
+    // Réinitialisation du cycle des couleurs
+    await Promise.all([idbPromise, chrome.storage.local.remove("folder_colors")]);
+    return true;
   },
 
   /**
@@ -237,11 +242,12 @@ export const DB = {
       return colors[folderName];
     }
 
-    // Attribution d'une nouvelle couleur au hasard
-    const randomHue = FOLDER_HUES[Math.floor(Math.random() * FOLDER_HUES.length)];
-    colors[folderName] = randomHue;
+    // Attribution cyclique des couleurs
+    const nextIndex = Object.keys(colors).length % FOLDER_HUES.length;
+    const newHue = FOLDER_HUES[nextIndex];
+    colors[folderName] = newHue;
     
     await chrome.storage.local.set({ folder_colors: colors });
-    return randomHue;
+    return newHue;
   }
 };

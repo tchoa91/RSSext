@@ -157,11 +157,6 @@ async function importOPML(file) {
     // 2. On récupère tous les flux RSS. Le XML respectant la casse, xmlUrl suffit.
     const outlines = doc.querySelectorAll("outline[xmlUrl]");
 
-    // Si on a trouvé des flux, on vide la base existante
-    if (outlines.length > 0) {
-      await DB.clearAll();
-    }
-    
     let count = 0;
     for (const el of outlines) {
       const url = el.getAttribute("xmlUrl");
