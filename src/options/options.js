@@ -14,6 +14,10 @@ function translateUI() {
 
 document.addEventListener("DOMContentLoaded", () => {
   translateUI();
+
+  const manifest = chrome.runtime.getManifest();
+  document.getElementById("version-display").textContent = `v${manifest.version}`;
+
   // 1. Chargement des paramètres
   const defaults = {
     interval: 30,

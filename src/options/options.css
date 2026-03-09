@@ -18,6 +18,14 @@ header h1 {
   color: var(--accent);
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  width: 1.5em;
+  height: 1.5em;
 }
 
 fieldset {
@@ -59,4 +67,11 @@ input[type="range"] {
 
 select, input, button {
   font-size: 0.9rem;
+}
+
+footer {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.6;
 }

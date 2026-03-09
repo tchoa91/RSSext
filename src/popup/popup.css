@@ -18,6 +18,14 @@ h1 {
   font-size: 1.2rem;
   margin: 0;
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.logo-icon {
+  width: 1.5em;
+  height: 1.5em;
 }
 
 main {
@@ -39,6 +47,10 @@ main {
   font-size: 0.75rem; /* Réduction significative de la taille (~60%) */
   padding: 0.15rem;
   color: var(--text-dim);
+}
+
+#list-actions button:hover {
+  color: var(--text);
 }
 
 #head-buttons {
@@ -193,7 +205,6 @@ dialog select {
 .folder-header {
   margin: 0.3rem 0.25rem 0.3rem;
   font-size: 0.85rem;
-  text-transform: uppercase;
   color: var(--text-dim);
   letter-spacing: 0.05em;
 }

@@ -266,7 +266,7 @@
   "btn_export_opml": { "message": "Export OPML" },
   "btn_delete_base": { "message": "Delete Base" },
   "footer_credits": {
-    "message": " - GPL 3.0 - 2026 - François Bacconnet - ",
+    "message": " - GPL 3.0 - 2026 - François Bacconnet ",
     "description": "Footer credits text"
   },
   "folder_uncategorized": {
