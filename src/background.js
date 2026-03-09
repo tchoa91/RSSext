@@ -15,6 +15,7 @@ import { DB } from "./db.js";
 // Configuration par défaut (pourrait être déplacée dans chrome.storage plus tard)
 const DEFAULT_INTERVAL = 30;
 const DEFAULT_TTL = 30;
+const SCAN_BATCH_SIZE = 5;
 
 /**
  * INITIALISATION
@@ -74,46 +75,64 @@ async function performScan() {
     // 1. Purge du buffer (TTL) avant de commencer
     await DB.purgeOldItems(ttl);
 
-    // 2. Récupération des sources
+    // 2. Récupération des sources et des items existants (une seule fois)
     const sources = await DB.getSources();
+    const existingItems = await DB.getItems();
+    const existingIds = new Set(existingItems.map((i) => i.id));
 
-    // 3. Scan asynchrone de chaque source
-    for (const source of sources) {
-      try {
-        const response = await fetch(source.xmlUrl, { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const xmlText = await response.text();
+    // 3. Traitement par lots parallèles
+    for (let i = 0; i < sources.length; i += SCAN_BATCH_SIZE) {
+      const batch = sources.slice(i, i + SCAN_BATCH_SIZE);
 
-        const freshItems = parseFeed(xmlText, source.xmlUrl, ttl);
-        const existingItems = await DB.getItems();
-        const existingIds = new Set(existingItems.map((i) => i.id));
+      const batchPromises = batch.map((source) =>
+        fetch(source.xmlUrl, { cache: "no-store" }).then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.text();
+        }),
+      );
 
-        // Filtrage des nouveautés
-        const newItems = freshItems.filter((item) => !existingIds.has(item.id));
+      const results = await Promise.allSettled(batchPromises);
 
-        if (newItems.length > 0) {
-          // Ajout en DB
-          await DB.addItems(newItems);
+      // On traite les résultats du lot
+      for (const [index, result] of results.entries()) {
+        const source = batch[index];
 
-          // Notification si l'option est activée pour cette source
-          // ET si les notifications globales sont activées (défaut true)
-          if (source.notify && (config.notify !== false)) {
-            newItems.forEach(item => {
-              NotificationSystem.enqueue(item, source, 1);
-            });
+        if (result.status === "fulfilled") {
+          try {
+            const xmlText = result.value;
+            const freshItems = parseFeed(xmlText, source.xmlUrl, ttl);
+
+            // Filtrage des nouveautés par rapport à ce qui est déjà en base OU déjà trouvé dans ce scan
+            const newItems = freshItems.filter((item) => !existingIds.has(item.id));
+
+            if (newItems.length > 0) {
+              await DB.addItems(newItems);
+              // On met à jour le set d'IDs pour éviter les doublons dans le même lot
+              newItems.forEach((item) => existingIds.add(item.id));
+
+              if (source.notify && config.notify !== false) {
+                newItems.forEach((item) => {
+                  NotificationSystem.enqueue(item, source, 1);
+                });
+              }
+            }
+
+            // Si la source avait une erreur précédemment, on la nettoie
+            if (source.error) {
+              delete source.error;
+              await DB.putSource(source);
+            }
+          } catch (err) {
+            console.warn(`RSSext: Failed to parse ${source.xmlUrl}`, err);
+            source.error = err.message || "Parse error";
+            await DB.putSource(source);
           }
-        }
-
-        // Si la source avait une erreur précédemment, on la nettoie
-        if (source.error) {
-          delete source.error;
+        } else { // 'rejected'
+          const err = result.reason;
+          console.warn(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
+          source.error = err.message || "Unknown error";
           await DB.putSource(source);
         }
-      } catch (err) {
-        console.warn(`RSSext: Failed to fetch ${source.xmlUrl}`, err);
-        // On enregistre l'erreur dans la source pour l'afficher dans l'UI
-        source.error = err.message || "Unknown error";
-        await DB.putSource(source);
       }
     }
     await updateBadge();
