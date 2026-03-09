@@ -180,7 +180,8 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
 
     if (link) {
       link = decodeEntities(link);
-      const id = btoa(link).substring(0, 32);
+      // On encode l'URL pour gérer les caractères spéciaux, puis on stocke l'empreinte complète.
+      const id = btoa(encodeURIComponent(link)).replace(/=/g, '');
       items.push({ id, xmlUrl, title, link, timestamp: pubDate }); // On stocke la vraie date !
     }
   }

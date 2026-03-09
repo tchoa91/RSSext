@@ -1,10 +1,10 @@
 {
   "extName": {
-    "message": "RSSext",
+    "message": "RSSext - Feed Sentinel",
     "description": "The name of the extension"
   },
   "extDesc": {
-    "message": "A minimalist, ephemeral RSS scanner. Notify, click, discard.",
+    "message": "A Sovereign RSS Watch Utility. Catch Your Bop, Leave The Mid!",
     "description": "The description of the extension"
   },
   "action_open": {
@@ -152,7 +152,7 @@
     "description": "Tooltip to switch to date view"
   },
   "ui_switch_to_folder": {
-    "message": "Switch to category sorted view",
+    "message": "Switch to folder sorted view",
     "description": "Tooltip to switch to folder view"
   },
   "footer_see_more": {
@@ -160,15 +160,15 @@
     "description": "Link to author website"
   },
   "options_title": {
-    "message": "RSSext Settings",
+    "message": "RSSext - Settings",
     "description": "Page title"
   },
   "options_header": {
-    "message": "RSSext Settings",
+    "message": "RSSext - Settings",
     "description": "H1 header"
   },
   "options_legend_general": {
-    "message": "General",
+    "message": "Core Settings",
     "description": "Legend for general settings"
   },
   "options_label_interval": {

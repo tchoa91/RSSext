@@ -4,22 +4,27 @@
 
   /* Couleurs Mode Clair */
   --bg: hsl(var(--main-hue), 10%, 93%);
-  --surface: hsl(var(--main-hue), 15%, 91%);
+  --surface-raw: var(--main-hue), 15%, 91%;
+  --border-raw: var(--main-hue), 10%, 80%;
+  --surface: hsl(var(--surface-raw));
+  --border: hsl(var(--border-raw));
   --text: hsl(var(--main-hue), 15%, 10%);
   --text-dim: hsl(var(--main-hue), 10%, 40%);
   --accent: hsl(var(--main-hue), 50%, 20%);
   --danger: hsl(19, 58%, 53%);
-  --border: hsl(var(--main-hue), 10%, 80%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: hsl(var(--main-hue), 15%, 7%);
-    --surface: hsl(var(--main-hue), 15%, 9%);
+    --bg-raw: var(--main-hue), 15%, 7%;
+    --surface-raw: var(--main-hue), 15%, 9%;
+    --border-raw: var(--main-hue), 10%, 25%;
+    --bg: hsl(var(--bg-raw));
+    --surface: hsl(var(--surface-raw));
     --text: hsl(var(--main-hue), 10%, 90%);
     --text-dim: hsl(var(--main-hue), 5%, 60%);
     --accent: hsl(var(--main-hue), 50%, 80%);
-    --border: hsl(var(--main-hue), 10%, 25%);
+    --border: hsl(var(--border-raw));
   }
 }
 
