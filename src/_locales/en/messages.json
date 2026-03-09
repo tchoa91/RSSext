@@ -23,6 +23,10 @@
     "message": "Expand All",
     "description": "Tooltip for expand all button"
   },
+  "action_show_sources": {
+    "message": "Show Sources Only",
+    "description": "Tooltip for show sources button"
+  },
   "action_collapse_all": {
     "message": "Collapse All",
     "description": "Tooltip for collapse all button"

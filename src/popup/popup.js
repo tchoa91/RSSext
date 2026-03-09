@@ -42,6 +42,7 @@ const SVG_TRASH = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12
 const SVG_CHECK_ALL = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L7 17l-5-5"></path><path d="M22 10l-7.5 7.5L13 16"></path></svg>`;
 const SVG_EXPAND = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
 const SVG_COLLAPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>`;
+const SVG_LIST = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`;
 const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
 // Raccourci i18n
@@ -208,6 +209,18 @@ async function renderApp() {
       renderApp();
     };
     
+    // Bouton Show Sources Only (Edit All)
+    const btnSources = document.createElement("button");
+    btnSources.innerHTML = SVG_LIST;
+    btnSources.title = t("action_show_sources");
+    btnSources.onclick = () => {
+      const sourceCollapsed = {};
+      // On replie toutes les sources, mais on laisse les dossiers ouverts (absents de la map)
+      sources.forEach(s => sourceCollapsed[`source:${s.xmlUrl}`] = true);
+      chrome.storage.local.set({ collapsed: sourceCollapsed });
+      renderApp();
+    };
+
     // Bouton Collapse All
     const btnCollapse = document.createElement("button");
     btnCollapse.innerHTML = SVG_COLLAPSE;
@@ -225,6 +238,7 @@ async function renderApp() {
     };
 
     listActions.appendChild(btnExpand);
+    listActions.appendChild(btnSources);
     listActions.appendChild(btnCollapse);
   } else if (viewMode === "date" && items.length > 0) {
     // Bouton Dismiss All
