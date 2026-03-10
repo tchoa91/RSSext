@@ -264,7 +264,7 @@ const NotificationSystem = {
       iconUrl: "/assets/icon128.png",
       title: item.title,
       message: source.title,
-      contextMessage: `${category} • ${age}`,
+      contextMessage: `${category} • (${age})`,
       buttons: [
         { title: chrome.i18n.getMessage("action_open") },
         { title: chrome.i18n.getMessage("action_discard") },

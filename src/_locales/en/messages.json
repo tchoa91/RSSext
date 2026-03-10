@@ -99,10 +99,6 @@
     "message": "General",
     "description": "Default folder name"
   },
-  "folder_imported": {
-    "message": "Imported",
-    "description": "Default folder for imports"
-  },
   "opml_export_title": {
     "message": "RSSext Export",
     "description": "Title in OPML file"
@@ -110,14 +106,6 @@
   "error_opml_import": {
     "message": "Error importing OPML file.",
     "description": "Error message"
-  },
-  "notif_batch_title": {
-    "message": "$COUNT$ new updates in $SOURCE$",
-    "description": "Notification title for multiple items",
-    "placeholders": {
-      "count": { "content": "$1" },
-      "source": { "content": "$2" }
-    }
   },
   "ui_name": {
     "message": "Name",
@@ -270,26 +258,12 @@
   "btn_export_opml": { "message": "Export OPML" },
   "btn_delete_base": { "message": "Delete Base" },
   "footer_credits": {
-    "message": " - GPL 3.0 - 2026 - François Bacconnet ",
+    "message": " - GPL 3.0 , 2026 , François Bacconnet ",
     "description": "Footer credits text"
   },
   "folder_uncategorized": {
     "message": "Uncategorized",
     "description": "Default folder for export"
-  },
-  "notif_prefix_from": {
-    "message": "From: $SOURCE$",
-    "description": "Notification message prefix",
-    "placeholders": {
-      "source": { "content": "$1" }
-    }
-  },
-  "notif_prefix_latest": {
-    "message": "Latest: $TITLE$",
-    "description": "Notification message prefix",
-    "placeholders": {
-      "title": { "content": "$1" }
-    }
   },
   "item_no_title": {
     "message": "No Title",
