@@ -93,6 +93,12 @@ main {
   margin-bottom: -3rem; /* Repli visuel de l'espace */
 }
 
+.item-content {
+  flex: 1;
+  min-width: 0;
+  margin-right: 0.625rem;
+}
+
 .item-link {
   text-decoration: none;
   color: var(--text);

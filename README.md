@@ -70,7 +70,7 @@ _RSSext is an anti-dogmatic tool. It doesn't try to think for you. It just watch
 
 ## 💬 FAQ (Frequently Asked Questions)
 
-### What is RSS ?
+### What is RSS?
 
 Imagine a web where you don't wait for an algorithm to decide what you should see. **RSS (Really Simple Syndication)** is the backbone of the open and decentralized web. It is a standard protocol that allows any website to broadcast its updates directly to its readers in a clean, machine-readable format.
 
@@ -89,9 +89,13 @@ Instead of "visiting" 50 sites to see if they've posted something new, or relyin
 - **Manual Entry:** Open the extension, click the **Second Big Button** (Add current), and you can edit all fields (Title, URL, Folder, etc.).
 - **Pro Tip:** If you want an empty form, use "Add current" while on a system page (like the extension’s options page)
 
-### How do I edit and delete my sources ?
+### How do I edit and delete my sources?
 
 Switch to the "Sorted by Folder" list view in the main popup. From there, you can manage your subscriptions directly.
+
+### How do I import a large OPML without a notification avalanche?
+
+Turn global notifications off before importing. Clear the list after the import is complete, then turn notifications back on.
 
 ### What do you mean by "Human Scale"?
 

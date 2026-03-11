@@ -531,13 +531,13 @@ function renderItemHtml(item, sourceInfo = null) {
 
   return `
     <div class="item-row" data-id="${item.id}">
-      <div style="flex: 1; min-width: 0; margin-right: 10px;">
+      <div class="item-content">
         <a href="${escapeHtml(addRef(item.link))}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
           ${escapeHtml(item.title)}
         </a>
         ${metaHtml}
       </div>
-      <button class="discard-btn" data-action="discard" title="Discard">×</button>
+      <button class="discard-btn" data-action="discard" title="${t("action_discard")}">×</button>
     </div>
   `;
 }
