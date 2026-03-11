@@ -1,6 +1,10 @@
 /**
- * RSSext - Logiciel de l'interface (GPL-3.0)
- * Gère l'affichage du buffer, l'ajout de sources et l'édition.
+ * ============================================================================
+ * RSSext - Interface Popup (GPL-3.0)
+ * ============================================================================
+ * RÔLE :
+ * Gère l'affichage du buffer, l'ajout de sources et l'édition rapide.
+ * ============================================================================
  */
 
 import { DB } from "../db.js";
@@ -46,9 +50,18 @@ const SVG_LIST = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
 const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
 // Raccourci i18n
+/**
+ * Fonction utilitaire pour l'i18n.
+ * @param {string} key - La clé du message.
+ * @returns {string} Le message traduit.
+ */
 const t = (key) => chrome.i18n.getMessage(key);
 
-// Sécurisation contre les injections HTML (XSS)
+/**
+ * Échappe les caractères HTML spéciaux pour prévenir les XSS.
+ * @param {string} str - La chaîne brute.
+ * @returns {string} La chaîne sécurisée.
+ */
 const escapeHtml = (str) => {
   if (!str) return "";
   return String(str)
@@ -60,7 +73,7 @@ const escapeHtml = (str) => {
 };
 
 /**
- * Traduit les éléments HTML ayant un attribut data-i18n
+ * Traduit les éléments HTML ayant un attribut data-i18n.
  */
 function translateUI() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
@@ -171,8 +184,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 /**
- * REPRODUCTION DE L'INTERFACE
- * Affiche les articles du buffer regroupés par source/dossier.
+ * Affiche les articles du buffer (Vue Date ou Vue Dossier).
+ * Gère l'état vide et les boutons d'action contextuels.
  */
 async function renderApp() {
   const settings = await chrome.storage.local.get(["view_mode", "collapsed"]);
@@ -185,6 +198,8 @@ async function renderApp() {
   const sources = await DB.getSources();
 
   // Pré-chargement des couleurs pour les dossiers
+  // Optimisation : On résout les couleurs une seule fois ici pour garantir la cohérence
+  // entre l'affichage des headers de dossiers et des tags dans les items individuels.
   const uniqueFolders = [...new Set(sources.map(s => s.folder || t("folder_general")))];
   const folderHues = {};
   for (const f of uniqueFolders) {
@@ -248,12 +263,14 @@ async function renderApp() {
     btnDismiss.onclick = async () => {
       if (confirm(t("ui_confirm_dismiss_all"))) {
         // Effet visuel "throttlé" (cascade)
+        // Note : On synchronise le délai JS avec l'animation CSS (.item-row transition)
+        // en ajoutant un petit délai progressif (60ms) par item pour l'effet "vague".
         const rows = Array.from(document.querySelectorAll(".item-row"));
         rows.forEach((row, index) => {
           setTimeout(() => row.classList.add("dismissing"), index * 60);
         });
 
-        // On attend que la cascade + l'animation (300ms) soient finies
+        // On attend que la cascade totale + la durée de transition (300ms) soient finies
         await new Promise(resolve => setTimeout(resolve, (rows.length * 60) + 300));
 
         const promises = items.map(i => DB.hideItem(i.id));
@@ -284,7 +301,9 @@ async function renderApp() {
 
   // Condition d'affichage de l'état vide :
   // - Mode Date : Pas d'articles
-  // - Mode Dossier : Pas de sources (car si on a des sources mais pas d'articles, on veut voir les sources)
+  // - Mode Dossier : Pas de sources.
+  // Subtilité : En mode Dossier, même si on a 0 articles, on veut afficher l'arborescence
+  // des dossiers/sources vides pour permettre à l'utilisateur de les gérer.
   const showEmptyState = (viewMode === "date" && items.length === 0) || (viewMode === "folder" && sources.length === 0);
 
   if (showEmptyState) {
@@ -297,12 +316,12 @@ async function renderApp() {
       const iconSettings = openSettingsBtn.innerHTML;
 
       emptyState.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px;">
-          <h2 style="margin: 0;">${t("welcome_title")}</h2>
-          <p style="margin: 0;">${t("welcome_add")}</p>
-          <button id="btn-welcome-add" class="primary" style="gap: 5px;">${iconAdd} ${t("btn_add")}</button>
-          <p style="margin: 0;">${t("welcome_sources")}</p>
-          <button id="btn-welcome-options" style="gap: 5px;">${iconSettings} ${t("btn_options")}</button>
+        <div class="empty-state-content">
+          <h2>${t("welcome_title")}</h2>
+          <p>${t("welcome_add")}</p>
+          <button id="btn-welcome-add" class="primary icon-gap">${iconAdd} ${t("btn_add")}</button>
+          <p>${t("welcome_sources")}</p>
+          <button id="btn-welcome-options" class="icon-gap">${iconSettings} ${t("btn_options")}</button>
         </div>
       `;
       document.getElementById("btn-welcome-add").onclick = detectAndAddFeed;
@@ -362,7 +381,7 @@ async function renderApp() {
         return `
           <div class="source-group">
             <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
-              <button class="chevron-btn" aria-expanded="${ariaExpanded}" style="cursor: pointer; display: inline-flex; background: none; border: none; padding: 0; color: inherit;">${SVG_CHEVRON}</button>
+              <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
               <span>${escapeHtml(data.title)} (${sourceItems.length}) ${errorHtml}</span>
               <div class="source-actions">
                 <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
@@ -389,7 +408,7 @@ async function renderApp() {
       return `
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
-            <button class="chevron-btn" aria-expanded="${ariaExpanded}" style="cursor: pointer; display: inline-flex; background: none; border: none; padding: 0; color: inherit;">${SVG_CHEVRON}</button>
+            <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
             <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} (${folderCount})</span>
           </h3>
           <div class="group-content">
@@ -405,11 +424,15 @@ async function renderApp() {
   }
 
   // Délégation d'événements pour le buffer
+  // Performance : Un seul listener sur le conteneur plutôt que N listeners sur chaque bouton.
   feedList.onclick = async (e) => {
     // 1. Gestion des actions de Source (Edit / Delete)
     const actionBtn = e.target.closest("button[data-action='edit-source'], button[data-action='delete-source']");
     if (actionBtn) {
-      e.stopPropagation(); // Empêche le repli du dossier
+      // Subtilité : e.stopPropagation() est crucial ici.
+      // Sans cela, le clic remonterait au parent (.collapsible-header)
+      // et déclencherait involontairement la fermeture/ouverture du dossier.
+      e.stopPropagation(); 
       const url = actionBtn.dataset.url;
       
       if (actionBtn.dataset.action === "edit-source") {
@@ -457,8 +480,9 @@ async function renderApp() {
     if (action === "discard" || action === "open") {
       if (action === "open") {
         e.preventDefault();
-        // Fix: On marque comme lu immédiatement car l'ouverture d'un onglet actif
-        // ferme la popup et tue le processus avant que le setTimeout ne s'exécute.
+        // Subtilité critique : On doit marquer l'item comme "lu" (hide) AVANT d'ouvrir l'onglet.
+        // Raison : Ouvrir un onglet actif provoque la fermeture immédiate de la Popup par Chrome,
+        // ce qui tue instantanément ce processus JS. Tout code après tabs.create ne s'exécuterait pas.
         await DB.hideItem(id);
         const background = e.ctrlKey || e.metaKey;
         chrome.tabs.create({ url: btn.href, active: !background });
@@ -505,6 +529,11 @@ async function renderApp() {
   };
 }
 
+/**
+ * Formate un timestamp en durée relative courte (ex: "5 min", "2 h").
+ * @param {number} timestamp - Date en millisecondes.
+ * @returns {string} Durée formatée.
+ */
 function formatTimeAgo(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   let interval = Math.floor(seconds / 2592000);
@@ -517,6 +546,12 @@ function formatTimeAgo(timestamp) {
   return (interval > 0 ? interval : 1) + " min";
 }
 
+/**
+ * Génère le HTML d'une ligne d'article.
+ * @param {Object} item - L'article à afficher.
+ * @param {Object|null} sourceInfo - Infos de la source (pour l'affichage en mode Date).
+ * @returns {string} HTML string.
+ */
 function renderItemHtml(item, sourceInfo = null) {
   const timeAgo = formatTimeAgo(item.timestamp);
   let metaContent = timeAgo;
@@ -527,12 +562,12 @@ function renderItemHtml(item, sourceInfo = null) {
     const folderHtml = `<span class="folder-tag" ${hueStyle}>${escapeHtml(sourceInfo.folder)}</span>`;
     metaContent = `${folderHtml} &bull; ${escapeHtml(sourceInfo.title)} &bull; ${timeAgo}`;
   }
-  const metaHtml = `<div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">${metaContent}</div>`;
+  const metaHtml = `<div class="item-meta">${metaContent}</div>`;
 
   return `
     <div class="item-row" data-id="${item.id}">
       <div class="item-content">
-        <a href="${escapeHtml(addRef(item.link))}" target="_blank" class="item-link" data-action="open" style="margin-right: 0;">
+        <a href="${escapeHtml(addRef(item.link))}" target="_blank" class="item-link no-margin-right" data-action="open">
           ${escapeHtml(item.title)}
         </a>
         ${metaHtml}
@@ -543,8 +578,8 @@ function renderItemHtml(item, sourceInfo = null) {
 }
 
 /**
- * DÉTECTION DU FLUX (Onglet actif)
- * Injecte un micro-script pour trouver la balise <link> RSS/Atom.
+ * Détecte un flux RSS sur l'onglet actif et ouvre le formulaire d'ajout.
+ * Utilise une injection de script puis une heuristique de repli.
  */
 async function detectAndAddFeed() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -562,6 +597,7 @@ async function detectAndAddFeed() {
     if (!urlObj.protocol.startsWith("http")) throw new Error("System page");
 
     // ÉTAPE 1 : Détection par le code (le "Graal")
+    // On injecte un script car la Popup n'a pas accès direct au DOM de l'onglet actif (isolation).
     const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
@@ -580,6 +616,8 @@ async function detectAndAddFeed() {
     finalUrl = result;
 
     // ÉTAPE 2 : Si rien n'est trouvé, on lance la prédiction (ton snippet)
+    // On passe par le Background (message) pour faire les fetchs afin de contourner
+    // les restrictions CORS (Cross-Origin Resource Sharing) strictes de la Popup.
     if (!finalUrl) {
       const patterns = [
         `${origin}/feed/`,
@@ -622,7 +660,8 @@ async function detectAndAddFeed() {
 }
 
 /**
- * GESTION DE L'OVERLAY (Dialog)
+ * Ouvre la modale d'édition/ajout de source.
+ * @param {Object} source - L'objet source (xmlUrl, title, folder...).
  */
 async function openEditOverlay(source) {
   document.getElementById("edit-name").value = source.title;
@@ -663,6 +702,10 @@ async function openEditOverlay(source) {
   dialog.showModal();
 }
 
+/**
+ * Gère la validation et la soumission du formulaire d'édition.
+ * @param {Event} e - L'événement submit.
+ */
 async function handleDialogSubmit(e) {
   e.preventDefault();
   const action = e.submitter.value;
@@ -739,7 +782,9 @@ document.getElementById("delete-source").onclick = async () => {
 };
 
 /**
- * Ajoute la signature RSSext à l'URL
+ * Ajoute le paramètre UTM à l'URL sortante.
+ * @param {string} url - URL originale.
+ * @returns {string} URL signée.
  */
 function addRef(url) {
   try {

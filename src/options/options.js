@@ -1,10 +1,24 @@
 /**
- * /home/tchoa/Dev/web/rssext/src/options/options.js
+ * ============================================================================
+ * RSSext - Page d'Options (GPL-3.0)
+ * ============================================================================
+ * RÔLE :
+ * Gère la configuration globale, l'import/export OPML et la personnalisation
+ * de l'interface (Thème, Zoom).
+ * ============================================================================
  */
 import { DB } from "../db.js";
 
+/**
+ * Fonction utilitaire pour l'i18n.
+ * @param {string} key - La clé du message.
+ * @returns {string} Le message traduit.
+ */
 const t = (key) => chrome.i18n.getMessage(key);
 
+/**
+ * Traduit l'interface utilisateur en parcourant les attributs data-i18n.
+ */
 function translateUI() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const msg = t(el.dataset.i18n);
@@ -77,6 +91,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-delete-base").onclick = deleteBase;
 });
 
+/**
+ * Sauvegarde une préférence individuelle et notifie le background.
+ * @param {string} key - Clé de la préférence.
+ * @param {any} value - Valeur à stocker.
+ */
 function saveSingleSetting(key, value) {
   chrome.storage.local.set({ [key]: value }, () => {
     if (key === "interval" || key === "ttl" || key === "notify") {
@@ -85,6 +104,9 @@ function saveSingleSetting(key, value) {
   });
 }
 
+/**
+ * Génère et déclenche le téléchargement d'un fichier OPML 2.0.
+ */
 async function exportOPML() {
   const sources = await DB.getSources();
   const folders = sources.reduce((acc, src) => {
@@ -145,6 +167,10 @@ async function exportOPML() {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Lit et importe un fichier OPML (XML) pour ajouter des sources.
+ * @param {File} file - Le fichier sélectionné par l'utilisateur.
+ */
 async function importOPML(file) {
   if (!file) return;
   
@@ -209,6 +235,9 @@ async function importOPML(file) {
   }
 }
 
+/**
+ * Supprime intégralement la base de données (Sources et Articles).
+ */
 async function deleteBase() {
   if (confirm(t("ui_confirm_clear_db"))) {
     await DB.clearAll();
@@ -217,6 +246,10 @@ async function deleteBase() {
   }
 }
 
+/**
+ * Applique le facteur de zoom à la racine du document.
+ * @param {string} level - 'small', 'medium', ou 'large'.
+ */
 function applyZoom(level) {
   const zoomMap = {
     small: "100%",

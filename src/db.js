@@ -157,6 +157,8 @@ export const DB = {
   /**
    * Désactive l'article pour qu'il ne soit plus affiché.
    * On garde l'entrée en DB pour que le scanner sache qu'il a déjà été traité.
+   * @param {string} id - L'ID unique de l'article.
+   * @returns {Promise<boolean>}
    */
   async hideItem(id) {
     const db = await this.open();
@@ -208,6 +210,7 @@ export const DB = {
 
   /**
    * Vide intégralement les sources et les items.
+   * @returns {Promise<boolean>}
    */
   async clearAll() {
     const db = await this.open();
@@ -231,6 +234,8 @@ export const DB = {
   /**
    * Récupère ou assigne une couleur à un dossier.
    * Stocké dans chrome.storage.local pour ne pas alourdir IndexedDB.
+   * @param {string} folderName - Nom du dossier.
+   * @returns {Promise<number>} La teinte (Hue) assignée.
    */
   async getFolderHue(folderName) {
     if (!folderName) return null; // "Général" reste sans couleur

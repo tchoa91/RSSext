@@ -182,6 +182,20 @@ dialog select {
   padding: 0 1.25rem;
 }
 
+.empty-state-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+}
+.empty-state-content h2, .empty-state-content p {
+  margin: 0;
+}
+.icon-gap {
+  gap: 5px;
+}
+
 /* --- Accordéon / Repliable --- */
 
 .collapsible-header {
@@ -197,6 +211,14 @@ dialog select {
   color: var(--text-dim);
 }
 
+.chevron-btn {
+  cursor: pointer;
+  display: inline-flex;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
 .collapsible-header.collapsed .icon-chevron {
   transform: rotate(-90deg);
 }
@@ -264,6 +286,16 @@ dialog select {
   color: var(--danger);
   margin-left: 0.3rem;
   cursor: help;
+}
+
+.item-meta {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.no-margin-right {
+  margin-right: 0;
 }
 
 /* --- Gestion des icônes SVG (Support du Zoom) --- */

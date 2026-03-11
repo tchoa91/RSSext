@@ -27,7 +27,6 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create("rss-scan-alarm", { periodInMinutes: DEFAULT_INTERVAL });
   // Premier scan immédiat
   performScan();
-  updateBadge();
 });
 
 /**
@@ -144,6 +143,10 @@ async function performScan() {
 /**
  * PARSER LIGHT (Regex)
  * Extrait Titre et URL sans utiliser le DOM.
+ * @param {string} xmlString - Le contenu XML brut.
+ * @param {string} xmlUrl - L'URL de la source (pour le contexte).
+ * @param {number} ttl - Durée de vie en jours.
+ * @returns {Array} Liste des articles trouvés.
  */
 function parseFeed(xmlString, xmlUrl, ttl = 30) {
   const items = [];
@@ -241,6 +244,9 @@ const NotificationSystem = {
 
   /**
    * Affiche la notification native.
+   * @param {Object} item - L'article.
+   * @param {Object} source - La source.
+   * @param {number} attempt - Le numéro de la tentative.
    */
   show(item, source, attempt) {
     // Calcul de l'âge pour le contexte
@@ -348,6 +354,7 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
 
 /**
  * MISE À JOUR DU BADGE
+ * Compte les items non cachés et met à jour l'icône.
  */
 async function updateBadge() {
   const items = await DB.getItems();
@@ -369,9 +376,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(() => sendResponse({ valid: false }));
     return true; // Obligatoire pour garder le canal ouvert (asynchrone)
   }
-});
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "scan_now") {
     console.log("RSSext: Scan manuel déclenché après import.");
     performScan(); // Ta fonction qui boucle sur les sources et fetch le XML
@@ -394,6 +399,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 /**
  * Décode les entités HTML (numériques et nommées basiques)
+ * @param {string} str - Chaîne encodée.
+ * @returns {string} Chaîne décodée.
  */
 function decodeEntities(str) {
   if (!str) return "";
@@ -414,6 +421,8 @@ function decodeEntities(str) {
 
 /**
  * Ajoute la signature RSSext à l'URL
+ * @param {string} url - URL brute.
+ * @returns {string} URL avec utm_source.
  */
 function addRef(url) {
   try {
