@@ -85,7 +85,7 @@ Instead of "visiting" 50 sites to see if they've posted something new, or relyin
 
 ### How do I add a source manually?
 
-- **Automatic:** Click the RSSext icon while browsing a website. Then click the **Second Big Button** (Add current).
+- **Automatic:** Click the RSSext icon while browsing a website with regular publications. Then click the **Second Big Button** (Add current).
 - **Manual Entry:** Open the extension, click the **Second Big Button** (Add current), and you can edit all fields (Title, URL, Folder, etc.).
 - **Pro Tip:** If you want an empty form, use "Add current" while on a system page (like the extension’s options page)
 
@@ -109,7 +109,7 @@ To keep the signal clear. Deeply nested hierarchies lead to digital hoarding. On
 
 ### Chrome Web Store (recommended)
 
-Link : Soon
+Link : https://chromewebstore.google.com/detail/jbipjphmipalepiakcjmdchcpdkajfja
 
 ### Github (only for advanced users, coders and other hackers)
 
