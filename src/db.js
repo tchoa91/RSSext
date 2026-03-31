@@ -3,13 +3,11 @@
  * RSSext - Module de Persistence (GPL-3.0)
  * ============================================================================
  * * PHILOSOPHIE :
- * Ce module gère le stockage local via IndexedDB. Contrairement aux lecteurs
- * classiques, RSSext traite les données comme volatiles.
+ * Ce module gère le stockage local via IndexedDB.
  * - 'sources' : Conserve tes abonnements et préférences (dossiers, notifications).
  * - 'items'   : Agit comme un buffer circulaire éphémère pour les nouveaux titres.
  * * ARCHITECTURE :
  * Utilise des Promises pour une intégration fluide dans le Service Worker (async/await).
- * Aucun stockage de contenu (body/description), seulement des métadonnées de lien.
  * ============================================================================
  */
 

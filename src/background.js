@@ -12,7 +12,7 @@
 
 import { DB } from "./db.js";
 
-// Configuration par défaut (pourrait être déplacée dans chrome.storage plus tard)
+// Configuration 
 const DEFAULT_INTERVAL = 30;
 const DEFAULT_TTL = 30;
 const SCAN_BATCH_SIZE = 5;
@@ -22,10 +22,16 @@ const SCAN_BATCH_SIZE = 5;
  * Se déclenche à l'installation ou lors d'une mise à jour.
  */
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("RSSext: Extension installed. Setting up alarm...");
   // Création de l'alarme principale pour le polling
   chrome.alarms.create("rss-scan-alarm", { periodInMinutes: DEFAULT_INTERVAL });
-  // Premier scan immédiat
+  performScan();
+});
+
+/**
+ * AU DÉMARRAGE DU NAVIGATEUR
+ * Lance un scan immédiat pour rafraîchir les données.
+ */
+chrome.runtime.onStartup.addListener(() => {
   performScan();
 });
 
@@ -73,6 +79,7 @@ async function performScan() {
 
     // 1. Purge du buffer (TTL) avant de commencer
     await DB.purgeOldItems(ttl);
+    await updateBadge();
 
     // 2. Récupération des sources et des items existants (une seule fois)
     const sources = await DB.getSources();
@@ -162,10 +169,10 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
     );
     const pubDate = dateMatch ? new Date(dateMatch[2]).getTime() : now;
 
-    // 2. LE GARDE-BARRIÈRE : Si l'article est plus vieux que le buffer, on ignore
+    // 2. Si l'article est plus vieux que le buffer, on ignore
     if (pubDate < threshold) continue;
 
-    // 3. Extraction Titre et Lien (le reste ne change pas)
+    // 3. Extraction Titre et Lien
     const titleMatch = block.match(
       /<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/,
     );
@@ -177,13 +184,30 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
     if (rssLinkMatch) {
       link = rssLinkMatch[1].trim();
     } else {
-      const atomLinkMatch = block.match(/<link[^+]+href=["']([^"']+)["']/);
+      const atomLinkMatch = block.match(/<link\s+[^>]*href=["']([^"']+)["']/i);
       link = atomLinkMatch ? atomLinkMatch[1] : "";
     }
 
     if (link) {
       link = decodeEntities(link);
-      // On encode l'URL pour gérer les caractères spéciaux, puis on stocke l'empreinte complète.
+      try {
+        const urlObj = new URL(link);
+        // Liste noire des paramètres de tracking les plus toxiques/courants
+        const trackingParams = [
+          "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", 
+          "fbclid", // Facebook
+          "gclid",  // Google Ads
+          "igshid", // Instagram
+          "si"      // YouTube Share ID (souvent ajouté récemment)
+        ];
+        trackingParams.forEach(param => urlObj.searchParams.delete(param));
+        link = urlObj.toString();
+      } catch (e) {
+        // L'URL est malformée ou relative (ex: "/article/1").
+        // On la laisse telle quelle plutôt que de crasher le parser entier.
+      }
+
+      // On encode l'URL pour générer l'ID
       const id = btoa(encodeURIComponent(link)).replace(/=/g, '');
       items.push({ id, xmlUrl, title, link, timestamp: pubDate }); // On stocke la vraie date !
     }
@@ -209,9 +233,6 @@ const NotificationSystem = {
 
   /**
    * Ajoute une notification à la file d'attente.
-   * @param {Object} item - L'article
-   * @param {Object} source - La source
-   * @param {number} attempt - 1 (premier passage) ou 2 (retry 15min)
    */
   enqueue(item, source, attempt = 1) {
     this.queue.push({ item, source, attempt });
@@ -244,9 +265,6 @@ const NotificationSystem = {
 
   /**
    * Affiche la notification native.
-   * @param {Object} item - L'article.
-   * @param {Object} source - La source.
-   * @param {number} attempt - Le numéro de la tentative.
    */
   show(item, source, attempt) {
     // Calcul de l'âge pour le contexte
@@ -298,9 +316,9 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
   const item = items.find((i) => i.id === itemId);
   
   if (item) {
-    chrome.tabs.create({ url: addRef(item.link) });
     await DB.hideItem(itemId);
     updateBadge();
+    chrome.tabs.create({ url: addRef(item.link) });
   }
   chrome.notifications.clear(notifId);
 });
@@ -311,18 +329,18 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
 chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
   const [itemId] = notifId.split(":");
   NotificationSystem.handledIds.add(notifId); // Marqué comme traité
+  chrome.notifications.clear(notifId);
 
-  if (btnIdx === 0) {
-    // OPEN
-    const items = await DB.getItems();
-    const item = items.find((i) => i.id === itemId);
-    if (item) chrome.tabs.create({ url: addRef(item.link) });
-  }
-  
-  // DANS TOUS LES CAS (Open ou Discard) -> On cache l'item
   await DB.hideItem(itemId);
   updateBadge();
-  chrome.notifications.clear(notifId);
+
+  if (btnIdx === 0) { // OPEN
+    const items = await DB.getItems();
+    const item = items.find((i) => i.id === itemId);
+    if (item) {
+      chrome.tabs.create({ url: addRef(item.link) });
+    }
+  }
 });
 
 /**
@@ -342,7 +360,7 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
   if (!byUser && !NotificationSystem.handledIds.has(notifId)) {
     // Si c'était la première tentative, on programme le retry dans 15 min
     if (attempt === 1) {
-      console.log(`RSSext: Item ${itemId} ignored. Retrying in 15min.`);
+      // console.log(`RSSext: Item ${itemId} ignored. Retrying in 15min.`);
       chrome.alarms.create(`retry:${itemId}`, { delayInMinutes: 15 });
     }
     // Si attempt === 2, on abandonne (supprimé de la queue visuelle, mais reste dans la DB non-caché)
@@ -378,12 +396,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "scan_now") {
-    console.log("RSSext: Scan manuel déclenché après import.");
-    performScan(); // Ta fonction qui boucle sur les sources et fetch le XML
+    // console.log("RSSext: Scan manuel déclenché après import.");
+    performScan(); 
   }
 
   if (request.action === "update_settings") {
-    console.log("RSSext: Settings updated. Refreshing alarm...");
+    // console.log("RSSext: Settings updated. Refreshing alarm...");
     
     // Interruption immédiate des notifications en cours
     NotificationSystem.clear();
@@ -399,8 +417,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 /**
  * Décode les entités HTML (numériques et nommées basiques)
- * @param {string} str - Chaîne encodée.
- * @returns {string} Chaîne décodée.
  */
 function decodeEntities(str) {
   if (!str) return "";
@@ -421,8 +437,6 @@ function decodeEntities(str) {
 
 /**
  * Ajoute la signature RSSext à l'URL
- * @param {string} url - URL brute.
- * @returns {string} URL avec utm_source.
  */
 function addRef(url) {
   try {

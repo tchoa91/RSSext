@@ -11,8 +11,6 @@ import { DB } from "../db.js";
 
 /**
  * Fonction utilitaire pour l'i18n.
- * @param {string} key - La clé du message.
- * @returns {string} Le message traduit.
  */
 const t = (key) => chrome.i18n.getMessage(key);
 

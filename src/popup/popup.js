@@ -50,17 +50,11 @@ const SVG_LIST = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
 const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
 // Raccourci i18n
-/**
- * Fonction utilitaire pour l'i18n.
- * @param {string} key - La clé du message.
- * @returns {string} Le message traduit.
- */
+
 const t = (key) => chrome.i18n.getMessage(key);
 
 /**
  * Échappe les caractères HTML spéciaux pour prévenir les XSS.
- * @param {string} str - La chaîne brute.
- * @returns {string} La chaîne sécurisée.
  */
 const escapeHtml = (str) => {
   if (!str) return "";
@@ -302,8 +296,6 @@ async function renderApp() {
   // Condition d'affichage de l'état vide :
   // - Mode Date : Pas d'articles
   // - Mode Dossier : Pas de sources.
-  // Subtilité : En mode Dossier, même si on a 0 articles, on veut afficher l'arborescence
-  // des dossiers/sources vides pour permettre à l'utilisateur de les gérer.
   const showEmptyState = (viewMode === "date" && items.length === 0) || (viewMode === "folder" && sources.length === 0);
 
   if (showEmptyState) {
@@ -484,6 +476,8 @@ async function renderApp() {
         // Raison : Ouvrir un onglet actif provoque la fermeture immédiate de la Popup par Chrome,
         // ce qui tue instantanément ce processus JS. Tout code après tabs.create ne s'exécuterait pas.
         await DB.hideItem(id);
+        const remaining = feedList.querySelectorAll(".item-row").length - 1;
+        chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
         const background = e.ctrlKey || e.metaKey;
         chrome.tabs.create({ url: btn.href, active: !background });
       }
@@ -531,8 +525,6 @@ async function renderApp() {
 
 /**
  * Formate un timestamp en durée relative courte (ex: "5 min", "2 h").
- * @param {number} timestamp - Date en millisecondes.
- * @returns {string} Durée formatée.
  */
 function formatTimeAgo(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -783,8 +775,6 @@ document.getElementById("delete-source").onclick = async () => {
 
 /**
  * Ajoute le paramètre UTM à l'URL sortante.
- * @param {string} url - URL originale.
- * @returns {string} URL signée.
  */
 function addRef(url) {
   try {
