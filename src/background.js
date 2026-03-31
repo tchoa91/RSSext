@@ -11,6 +11,7 @@
  */
 
 import { DB } from "./db.js";
+import { decodeEntities, addRef } from "./utils.js";
 
 // Configuration 
 const DEFAULT_INTERVAL = 30;
@@ -414,36 +415,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     performScan();
   }
 });
-
-/**
- * Décode les entités HTML (numériques et nommées basiques)
- */
-function decodeEntities(str) {
-  if (!str) return "";
-  return str.replace(/&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/ig, (match, entity) => {
-    entity = entity.toLowerCase();
-    if (entity.startsWith("#x")) {
-      return String.fromCharCode(parseInt(entity.substr(2), 16));
-    }
-    if (entity.startsWith("#")) {
-      return String.fromCharCode(parseInt(entity.substr(1), 10));
-    }
-    const named = {
-      "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'"
-    };
-    return named[entity] || match;
-  });
-}
-
-/**
- * Ajoute la signature RSSext à l'URL
- */
-function addRef(url) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set("utm_source", "RSSext");
-    return urlObj.toString();
-  } catch (e) {
-    return url;
-  }
-}

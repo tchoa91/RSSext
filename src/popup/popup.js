@@ -8,6 +8,7 @@
  */
 
 import { DB } from "../db.js";
+import { t, escapeHtml, formatTimeAgo, addRef, applyZoom, translateUI } from "../utils.js";
 
 // Références DOM
 const feedList = document.getElementById("feed-list");
@@ -49,37 +50,6 @@ const SVG_COLLAPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const SVG_LIST = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`;
 const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
-// Raccourci i18n
-
-const t = (key) => chrome.i18n.getMessage(key);
-
-/**
- * Échappe les caractères HTML spéciaux pour prévenir les XSS.
- */
-const escapeHtml = (str) => {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
-/**
- * Traduit les éléments HTML ayant un attribut data-i18n.
- */
-function translateUI() {
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const msg = t(el.dataset.i18n);
-    if (msg) el.textContent = msg;
-  });
-  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
-    const msg = t(el.dataset.i18nTitle);
-    if (msg) el.title = msg;
-  });
-}
-
 /**
  * INITIALISATION
  */
@@ -90,12 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.documentElement.style.setProperty("--main-hue", result.hue);
     }
     if (result.zoom) {
-      const zoomMap = {
-        small: "100%",
-        medium: "120%",
-        large: "150%"
-      };
-      document.documentElement.style.fontSize = zoomMap[result.zoom] || "100%";
+      applyZoom(result.zoom);
     }
   });
 
@@ -524,21 +489,6 @@ async function renderApp() {
 }
 
 /**
- * Formate un timestamp en durée relative courte (ex: "5 min", "2 h").
- */
-function formatTimeAgo(timestamp) {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  let interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) return interval + " mois";
-  interval = Math.floor(seconds / 86400);
-  if (interval >= 1) return interval + " j";
-  interval = Math.floor(seconds / 3600);
-  if (interval >= 1) return interval + " h";
-  interval = Math.floor(seconds / 60);
-  return (interval > 0 ? interval : 1) + " min";
-}
-
-/**
  * Génère le HTML d'une ligne d'article.
  * @param {Object} item - L'article à afficher.
  * @param {Object|null} sourceInfo - Infos de la source (pour l'affichage en mode Date).
@@ -772,16 +722,3 @@ document.getElementById("delete-source").onclick = async () => {
     renderApp();
   }
 };
-
-/**
- * Ajoute le paramètre UTM à l'URL sortante.
- */
-function addRef(url) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set("utm_source", "RSSext");
-    return urlObj.toString();
-  } catch (e) {
-    return url;
-  }
-}

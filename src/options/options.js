@@ -8,21 +8,7 @@
  * ============================================================================
  */
 import { DB } from "../db.js";
-
-/**
- * Fonction utilitaire pour l'i18n.
- */
-const t = (key) => chrome.i18n.getMessage(key);
-
-/**
- * Traduit l'interface utilisateur en parcourant les attributs data-i18n.
- */
-function translateUI() {
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const msg = t(el.dataset.i18n);
-    if (msg) el.textContent = msg;
-  });
-}
+import { t, applyZoom, translateUI } from "../utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   translateUI();
@@ -242,17 +228,4 @@ async function deleteBase() {
     // On notifie le background pour qu'il mette à jour le badge (0)
     chrome.runtime.sendMessage({ action: "scan_now" });
   }
-}
-
-/**
- * Applique le facteur de zoom à la racine du document.
- * @param {string} level - 'small', 'medium', ou 'large'.
- */
-function applyZoom(level) {
-  const zoomMap = {
-    small: "100%",
-    medium: "120%",
-    large: "150%"
-  };
-  document.documentElement.style.fontSize = zoomMap[level] || "100%";
 }
