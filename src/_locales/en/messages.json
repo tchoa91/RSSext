@@ -272,5 +272,21 @@
   "source_new_title": {
     "message": "New Source",
     "description": "Fallback title for new source"
+  },
+  "time_mth": {
+    "message": " mth",
+    "description": "Time ago suffix: months"
+  },
+  "time_d": {
+    "message": " d",
+    "description": "Time ago suffix: days"
+  },
+  "time_h": {
+    "message": " h",
+    "description": "Time ago suffix: hours"
+  },
+  "time_min": {
+    "message": " min",
+    "description": "Time ago suffix: minutes"
   }
 }

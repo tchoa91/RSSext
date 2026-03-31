@@ -71,5 +71,9 @@
   "footer_credits": { "message": " - GPL 3.0 , 2026 , François Bacconnet ", "description": "Footer credits text" },
   "folder_uncategorized": { "message": "미분류", "description": "Default folder for export" },
   "item_no_title": { "message": "제목 없음", "description": "Fallback title for items" },
-  "source_new_title": { "message": "새 소스", "description": "Fallback title for new source" }
+  "source_new_title": { "message": "새 소스", "description": "Fallback title for new source" },
+  "time_mth": { "message": "개월", "description": "Time ago suffix: months" },
+  "time_d": { "message": "일", "description": "Time ago suffix: days" },
+  "time_h": { "message": "시간", "description": "Time ago suffix: hours" },
+  "time_min": { "message": "분", "description": "Time ago suffix: minutes" }
 }

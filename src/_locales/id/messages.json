@@ -71,5 +71,9 @@
   "footer_credits": { "message": " - GPL 3.0 , 2026 , François Bacconnet ", "description": "Footer credits text" },
   "folder_uncategorized": { "message": "Tanpa Kategori", "description": "Default folder for export" },
   "item_no_title": { "message": "Tanpa Judul", "description": "Fallback title for items" },
-  "source_new_title": { "message": "Sumber Baru", "description": "Fallback title for new source" }
+  "source_new_title": { "message": "Sumber Baru", "description": "Fallback title for new source" },
+  "time_mth": { "message": " bln", "description": "Time ago suffix: months" },
+  "time_d": { "message": " hr", "description": "Time ago suffix: days" },
+  "time_h": { "message": " jam", "description": "Time ago suffix: hours" },
+  "time_min": { "message": " mnt", "description": "Time ago suffix: minutes" }
 }

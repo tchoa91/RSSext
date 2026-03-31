@@ -101,11 +101,11 @@ export const escapeHtml = (str) => {
 export function formatTimeAgo(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   let interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) return interval + " mois";
+  if (interval >= 1) return interval + t("time_mth");
   interval = Math.floor(seconds / 86400);
-  if (interval >= 1) return interval + " j";
+  if (interval >= 1) return interval + t("time_d");
   interval = Math.floor(seconds / 3600);
-  if (interval >= 1) return interval + " h";
+  if (interval >= 1) return interval + t("time_h");
   interval = Math.floor(seconds / 60);
-  return (interval > 0 ? interval : 1) + " min";
+  return (interval > 0 ? interval : 1) + t("time_min");
 }

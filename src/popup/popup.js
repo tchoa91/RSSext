@@ -151,9 +151,7 @@ async function renderApp() {
   const viewMode = settings.view_mode || "date";
   const collapsedState = settings.collapsed || {};
 
-  const allItems = await DB.getItems();
-  // On ne garde que ceux qui n'ont pas le flag 'hidden'
-  const items = allItems.filter((item) => !item.hidden);
+  const items = await DB.getItems();
   const sources = await DB.getSources();
 
   // Pré-chargement des couleurs pour les dossiers

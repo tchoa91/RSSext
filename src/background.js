@@ -54,7 +54,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const items = await DB.getItems();
     const item = items.find((i) => i.id === itemId);
     // On ne relance que si l'item existe encore et n'est pas caché
-    if (item && !item.hidden) {
+    if (item) {
       // On doit retrouver la source pour l'affichage
       const sources = await DB.getSources();
       const source = sources.find((s) => s.xmlUrl === item.xmlUrl);
@@ -73,6 +73,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  * LOGIQUE DE SCAN PRINCIPALE
  */
 async function performScan() {
+  // Vérification de la connectivité avant tout
+  if (!navigator.onLine) {
+    // console.log("RSSext: Appareil hors ligne, scan reporté.");
+    return;
+  }
+
   try {
     // Récupération de la config
     const config = await chrome.storage.local.get(["ttl", "notify"]);
@@ -84,7 +90,7 @@ async function performScan() {
 
     // 2. Récupération des sources et des items existants (une seule fois)
     const sources = await DB.getSources();
-    const existingItems = await DB.getItems();
+    const existingItems = await DB.getAllItems();
     const existingIds = new Set(existingItems.map((i) => i.id));
 
     // 3. Traitement par lots parallèles
@@ -252,7 +258,7 @@ const NotificationSystem = {
     // Vérification ultime : l'article est-il toujours valide (non caché) ?
     DB.getItems().then((items) => {
       const dbItem = items.find((i) => i.id === item.id);
-      if (dbItem && !dbItem.hidden) {
+      if (dbItem) {
         this.show(item, source, attempt);
       }
     }).finally(() => {
@@ -313,7 +319,7 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
   const [itemId] = notifId.split(":");
   NotificationSystem.handledIds.add(notifId); // Marqué comme traité
 
-  const items = await DB.getItems();
+  const items = await DB.getAllItems();
   const item = items.find((i) => i.id === itemId);
   
   if (item) {
@@ -336,7 +342,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
   updateBadge();
 
   if (btnIdx === 0) { // OPEN
-    const items = await DB.getItems();
+    const items = await DB.getAllItems();
     const item = items.find((i) => i.id === itemId);
     if (item) {
       chrome.tabs.create({ url: addRef(item.link) });
@@ -377,7 +383,7 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
  */
 async function updateBadge() {
   const items = await DB.getItems();
-  const count = items.filter((i) => !i.hidden).length;
+  const count = items.length;
   const text = count > 0 ? count.toString() : "";
   chrome.action.setBadgeText({ text });
 }
