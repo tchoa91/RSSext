@@ -11,7 +11,7 @@
  */
 
 import { DB } from "./db.js";
-import { decodeEntities, addRef } from "./utils.js";
+import { decodeEntities, addRef, formatTimeAgo, t } from "./utils.js";
 
 // Configuration 
 const DEFAULT_INTERVAL = 30;
@@ -116,12 +116,16 @@ async function performScan() {
             const freshItems = parseFeed(xmlText, source.xmlUrl, ttl);
 
             // Filtrage des nouveautés par rapport à ce qui est déjà en base OU déjà trouvé dans ce scan
-            const newItems = freshItems.filter((item) => !existingIds.has(item.id));
+            const newItems = freshItems.filter((item) => {
+              if (!existingIds.has(item.id)) {
+                existingIds.add(item.id); // On l'ajoute immédiatement pour bloquer les doublons suivants
+                return true;
+              }
+              return false;
+            });
 
             if (newItems.length > 0) {
               await DB.addItems(newItems);
-              // On met à jour le set d'IDs pour éviter les doublons dans le même lot
-              newItems.forEach((item) => existingIds.add(item.id));
 
               if (source.notify && config.notify !== false) {
                 newItems.forEach((item) => {
@@ -188,11 +192,32 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
 
     let link = "";
     const rssLinkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
+    
     if (rssLinkMatch) {
+      // Stratégie RSS 2.0 classique
       link = rssLinkMatch[1].trim();
     } else {
-      const atomLinkMatch = block.match(/<link\s+[^>]*href=["']([^"']+)["']/i);
-      link = atomLinkMatch ? atomLinkMatch[1] : "";
+      // Stratégie Atom : on récupère toutes les balises <link> de l'entrée
+      const atomLinks = block.match(/<link[^>]+>/ig) || [];
+      
+      for (const linkTag of atomLinks) {
+        // Règle n°1 : On ignore strictement les liens qui pointent vers le flux lui-même
+        if (/rel=["']self["']/i.test(linkTag)) {
+          continue;
+        }
+
+        const hrefMatch = linkTag.match(/href=["']([^"']+)["']/i);
+        if (hrefMatch) {
+          link = hrefMatch[1];
+          
+          // Règle n°2 : Si on trouve un alternate explicite, c'est le vainqueur absolu.
+          if (/rel=["']alternate["']/i.test(linkTag)) {
+            break; 
+          }
+          // Note : S'il n'y a pas d'attribut 'rel', on stocke le href (Atom suppose que c'est l'alternate par défaut),
+          // mais on laisse la boucle continuer au cas où un vrai alternate plus qualitatif se cache plus loin.
+        }
+      }
     }
 
     if (link) {
@@ -275,15 +300,8 @@ const NotificationSystem = {
    */
   show(item, source, attempt) {
     // Calcul de l'âge pour le contexte
-    const diff = Date.now() - item.timestamp;
-    const minutes = Math.floor(diff / 60000);
-    let age;
-    if (minutes < 60) age = `${minutes} min`;
-    else if (minutes < 1440) age = `${Math.floor(minutes / 60)} h`;
-    else if (minutes < 43200) age = `${Math.floor(minutes / 1440)} d`;
-    else age = `${Math.floor(minutes / 43200)} m`;
-
-    const category = source.folder || "Général";
+    const age = formatTimeAgo(item.timestamp);
+    const category = source.folder || t("folder_general");
 
     // ID unique pour la notif, mais on garde l'ID de l'item pour la logique
     // Format: "item_id:attempt:timestamp"

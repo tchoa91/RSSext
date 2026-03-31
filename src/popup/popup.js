@@ -608,7 +608,6 @@ async function openEditOverlay(source) {
   const urlInput = document.getElementById("edit-url");
   if (urlInput) {
     urlInput.value = source.xmlUrl;
-    urlInput.removeAttribute("required");
   }
   
   // Population du Select Dossier
@@ -659,15 +658,6 @@ async function handleDialogSubmit(e) {
   const urlInput = document.getElementById("edit-url");
   const newUrl = urlInput ? urlInput.value.trim() : oldUrl;
 
-  if (!newUrl) {
-    if (urlInput) {
-      urlInput.setCustomValidity("URL required");
-      urlInput.reportValidity();
-      urlInput.addEventListener("input", () => urlInput.setCustomValidity(""), { once: true });
-    }
-    return;
-  }
-
   const saveBtn = e.submitter;
   saveBtn.disabled = true;
   saveBtn.style.cursor = "wait";
@@ -704,9 +694,7 @@ async function handleDialogSubmit(e) {
     await DB.deleteSource(oldUrl);
   }
 
-  chrome.runtime.getBackgroundPage
-    ? null
-    : chrome.runtime.sendMessage({ action: "scan_now" });
+  chrome.runtime.sendMessage({ action: "scan_now" });
 
   dialog.close();
   renderApp();
