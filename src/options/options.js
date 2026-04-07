@@ -179,28 +179,38 @@ async function importOPML(file) {
       const url = el.getAttribute("xmlUrl");
       if (!url) continue;
 
-      // 3. Recherche du dossier de 1er niveau (Top-level folder)
-      let currentParent = el.parentElement;
-      let topFolderEl = null;
+      // 3. Recherche du dossier (Catégorie)
+      let folder = "";
 
-      // On remonte l'arbre DOM tant que le parent est une balise <outline>.
-      // Le dernier trouvé juste avant le <body> sera notre dossier racine.
-      while (currentParent && currentParent.tagName.toLowerCase() === "outline") {
-        topFolderEl = currentParent;
-        currentParent = currentParent.parentElement;
+      // Tentative A : L'attribut plat (très courant dans les exports générés à la volée)
+      const flatCategory = el.getAttribute("category");
+      if (flatCategory) {
+        // Certains séparent les sous-dossiers par des virgules ou des slashs, on prend le premier
+        folder = flatCategory.split(",")[0].split("/")[0].trim();
+      } 
+      // Tentative B : La hiérarchie standard OPML
+      else {
+        let currentParent = el.parentElement;
+        let topFolderEl = null;
+
+        // La vérification currentParent.tagName sécurise contre les noeuds document/texte inattendus
+        while (currentParent && currentParent.tagName && currentParent.tagName.toLowerCase() === "outline") {
+          topFolderEl = currentParent;
+          currentParent = currentParent.parentElement;
+        }
+
+        if (topFolderEl) {
+          folder = topFolderEl.getAttribute("text") || topFolderEl.getAttribute("title") || "";
+          folder = folder.trim();
+        }
       }
-
-      // 4. Extraction du nom, ou chaîne vide pour retomber dans la catégorie "Général"
-      const folder = topFolderEl 
-        ? (topFolderEl.getAttribute("text") || topFolderEl.getAttribute("title") || "") 
-        : "";
 
       const title = el.getAttribute("text") || el.getAttribute("title") || url;
 
-      // 5. Attribution d'une couleur au dossier (si ce n'est pas la catégorie générale)
+      // 4. Attribution d'une couleur au dossier (si ce n'est pas la catégorie générale)
       if (folder) await DB.getFolderHue(folder);
 
-      // 6. Sauvegarde en base
+      // 5. Sauvegarde en base
       await DB.putSource({
         xmlUrl: url,
         title: title,
@@ -210,7 +220,7 @@ async function importOPML(file) {
       count++;
     }
 
-    // 7. Relance du worker pour récupérer immédiatement les nouveaux articles
+    // 6. Relance du worker pour récupérer immédiatement les nouveaux articles
     chrome.runtime.sendMessage({ action: "scan_now" });
     
   } catch (err) {

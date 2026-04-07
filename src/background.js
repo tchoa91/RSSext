@@ -22,9 +22,10 @@ const SCAN_BATCH_SIZE = 5;
  * INITIALISATION
  * Se déclenche à l'installation ou lors d'une mise à jour.
  */
-chrome.runtime.onInstalled.addListener(() => {
-  // Création de l'alarme principale pour le polling
-  chrome.alarms.create("rss-scan-alarm", { periodInMinutes: DEFAULT_INTERVAL });
+chrome.runtime.onInstalled.addListener(async () => {
+  const config = await chrome.storage.local.get(["interval"]);
+  const interval = parseInt(config.interval, 10) || DEFAULT_INTERVAL;
+  chrome.alarms.create("rss-scan-alarm", { periodInMinutes: interval });
   performScan();
 });
 
@@ -97,12 +98,26 @@ async function performScan() {
     for (let i = 0; i < sources.length; i += SCAN_BATCH_SIZE) {
       const batch = sources.slice(i, i + SCAN_BATCH_SIZE);
 
-      const batchPromises = batch.map((source) =>
-        fetch(source.xmlUrl, { cache: "no-store" }).then((response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.text();
-        }),
-      );
+      const batchPromises = batch.map((source) => {
+        // Implémentation du Timeout de sécurité (10 secondes)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        return fetch(source.xmlUrl, { cache: "no-store", signal: controller.signal })
+          .then((response) => {
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text();
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            // Si l'erreur est déclenchée par notre AbortController
+            if (err.name === 'AbortError') {
+              throw new Error("Timeout (10s)");
+            }
+            throw err;
+          });
+      });
 
       const results = await Promise.allSettled(batchPromises);
 
@@ -224,6 +239,10 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
       link = decodeEntities(link);
       try {
         const urlObj = new URL(link);
+        // On refuse tout ce qui n'est pas strictement du HTTP(S)
+        if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+           continue; // On rejette ce lien empoisonné ou invalide
+        }
         // Liste noire des paramètres de tracking les plus toxiques/courants
         const trackingParams = [
           "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", 
@@ -272,7 +291,7 @@ const NotificationSystem = {
   },
 
   /**
-   * Traite la file d'attente avec un throttling (1 seconde).
+   * Traite la file d'attente avec un throttling
    */
   processQueue() {
     if (this.isProcessing || this.queue.length === 0) return;
@@ -280,18 +299,21 @@ const NotificationSystem = {
     this.isProcessing = true;
     const { item, source, attempt } = this.queue.shift();
 
-    // Vérification ultime : l'article est-il toujours valide (non caché) ?
     DB.getItems().then((items) => {
       const dbItem = items.find((i) => i.id === item.id);
       if (dbItem) {
         this.show(item, source, attempt);
       }
     }).finally(() => {
-      // Throttling : on attend 2s avant de traiter le suivant
+      // 2. Définition et bascule du délai
+      const currentDelay = this.useLongDelay ? 3000 : 2800;
+      this.useLongDelay = !this.useLongDelay; // On inverse pour le prochain passage
+
+      // 3. Application du délai calculé
       setTimeout(() => {
         this.isProcessing = false;
         this.processQueue();
-      }, 2000);
+      }, currentDelay);
     });
   },
 
@@ -343,6 +365,7 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
   if (item) {
     await DB.hideItem(itemId);
     updateBadge();
+    chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
     chrome.tabs.create({ url: addRef(item.link) });
   }
   chrome.notifications.clear(notifId);
@@ -358,6 +381,7 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
 
   await DB.hideItem(itemId);
   updateBadge();
+  chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
 
   if (btnIdx === 0) { // OPEN
     const items = await DB.getAllItems();
@@ -377,7 +401,10 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
 
   // Si fermé par l'utilisateur (la croix), on considère ça comme un "Vu/Ignoré" -> On cache
   if (byUser) {
-    DB.hideItem(itemId).then(updateBadge);
+    DB.hideItem(itemId).then(() => {
+      updateBadge();
+      chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
+    });
     return;
   }
 

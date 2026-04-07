@@ -57,24 +57,36 @@ export function applyZoom(level) {
 }
 
 /**
- * Décode les entités HTML (numériques et nommées basiques).
+ * Dictionnaire des entités HTML les plus courantes dans la presse et les blogs.
+ */
+const NAMED_ENTITIES = {
+  "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'",
+  "nbsp": " ", "ndash": "–", "mdash": "—", 
+  "lsquo": "‘", "rsquo": "’", "sbquo": "‚", 
+  "ldquo": "“", "rdquo": "”", "bdquo": "„",
+  "laquo": "«", "raquo": "»", "hellip": "…",
+  "euro": "€", "copy": "©", "reg": "®", "trade": "™",
+  "bull": "•", "cent": "¢", "pound": "£", "yen": "¥"
+};
+
+/**
+ * Décode les entités HTML (numériques et nommées courantes).
  * @param {string} str - La chaîne à décoder.
  * @returns {string}
  */
 export function decodeEntities(str) {
   if (!str) return "";
-  return str.replace(/&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/ig, (match, entity) => {
-    entity = entity.toLowerCase();
-    if (entity.startsWith("#x")) {
+  
+  // Utilisation de [a-zA-Z] au lieu du flag 'i' pour respecter la casse des entités nommées
+  return str.replace(/&([a-zA-Z0-9]+|#[0-9]{1,6}|#x[0-9a-fA-F]{1,6});/g, (match, entity) => {
+    if (entity.toLowerCase().startsWith("#x")) {
       return String.fromCharCode(parseInt(entity.substr(2), 16));
     }
     if (entity.startsWith("#")) {
       return String.fromCharCode(parseInt(entity.substr(1), 10));
     }
-    const named = {
-      "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'"
-    };
-    return named[entity] || match;
+    
+    return NAMED_ENTITIES[entity] || match;
   });
 }
 

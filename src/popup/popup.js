@@ -140,6 +140,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   openSettingsBtn.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
   });
+
+  // Bouton supprimer dans l'overlay
+  document.getElementById("delete-source").onclick = async () => {
+    if (confirm(t("ui_confirm_delete_full"))) {
+      await DB.deleteSource(dialog.dataset.currentUrl);
+      dialog.close();
+      renderApp();
+    }
+  };
 });
 
 /**
@@ -448,40 +457,8 @@ async function renderApp() {
       // Animation de sortie
       row.classList.add("dismissing");
 
-      // On attend la fin de l'animation CSS (300ms) avant de supprimer du DOM/DB
-      setTimeout(async () => {
-        if (action === "discard") await DB.hideItem(id);
-
-        const sourceGroup = row.closest(".source-group");
-        const folderGroup = row.closest(".folder-group");
-        
-        row.remove();
-
-        if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
-          sourceGroup.remove();
-        }
-
-        if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
-          folderGroup.remove();
-        }
-
-        const remaining = feedList.querySelectorAll(".item-row").length;
-        chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
-
-        if (remaining === 0) {
-          renderApp();
-        } else {
-          // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
-          if (sourceGroup && sourceGroup.isConnected) {
-            const span = sourceGroup.querySelector("h4 span");
-            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
-          }
-          if (folderGroup && folderGroup.isConnected) {
-            const span = folderGroup.querySelector("h3 span");
-            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
-          }
-        }
-      }, 300); // Correspond à la durée de transition CSS
+      if (action === "discard") await DB.hideItem(id);
+      removeRowVisually(id);
     }
   };
 }
@@ -700,11 +677,60 @@ async function handleDialogSubmit(e) {
   renderApp();
 }
 
-// Bouton supprimer dans l'overlay
-document.getElementById("delete-source").onclick = async () => {
-  if (confirm(t("ui_confirm_delete_full"))) {
-    await DB.deleteSource(dialog.dataset.currentUrl);
-    dialog.close();
-    renderApp();
+/**
+ * Supprime visuellement une ligne du DOM avec animation
+ * et met à jour les compteurs des dossiers/sources.
+ * @param {string} id - L'ID de l'item à supprimer
+ */
+function removeRowVisually(id) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (!row) return; // L'article n'est pas dans le DOM actuel
+
+  // Animation de sortie
+  row.classList.add("dismissing");
+
+  // On attend la fin de l'animation CSS avant de supprimer du DOM
+  setTimeout(() => {
+    const sourceGroup = row.closest(".source-group");
+    const folderGroup = row.closest(".folder-group");
+    
+    row.remove();
+
+    // Nettoyage des groupes vides
+    if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
+      sourceGroup.remove();
+    }
+    if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
+      folderGroup.remove();
+    }
+
+    const remaining = document.querySelectorAll(".item-row").length;
+    chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
+
+    // Si c'était le dernier, on relance le rendu pour afficher l'état vide
+    if (remaining === 0) {
+      renderApp(); 
+    } else {
+      // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
+      if (sourceGroup && sourceGroup.isConnected) {
+        const span = sourceGroup.querySelector("h4 span");
+        if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
+      }
+      if (folderGroup && folderGroup.isConnected) {
+        const span = folderGroup.querySelector("h3 span");
+        if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
+      }
+    }
+  }, 300);
+}
+
+/**
+ * Écouteur d'événements globaux provenant du Background
+ * Utile pour rafraîchir l'interface si l'utilisateur interagit 
+ * avec les notifications pendant que la popup est ouverte.
+ */
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === "hide_item_ui" && message.itemId) {
+    removeRowVisually(message.itemId);
   }
-};
+});
