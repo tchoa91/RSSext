@@ -105,6 +105,10 @@ RSSext is designed for a curated selection of sources that a human brain can act
 
 To keep the signal clear. Deeply nested hierarchies lead to digital hoarding. One level of organization is enough to segment your interests (e.g., Tech, News, Music) without adding administrative overhead to your reading.
 
+## CHANGE LOG
+
+**v1.0.1 :** Multiple under-the-hood bug fixes and improvements: core resilience, notifications tuning, better UI sync and a few tweaks.
+
 ## 🛠 How to Install and Use
 
 ### Chrome Web Store (recommended)
