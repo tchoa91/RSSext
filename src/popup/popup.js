@@ -346,7 +346,7 @@ async function renderApp() {
           <div class="source-group">
             <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
               <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
-              <span>${escapeHtml(data.title)} (${sourceItems.length}) ${errorHtml}</span>
+              <span>${escapeHtml(data.title)} <span class="counter">(${sourceItems.length})</span> ${errorHtml}</span>
               <div class="source-actions">
                 <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
                   ${SVG_EDIT}
@@ -373,7 +373,7 @@ async function renderApp() {
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
             <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
-            <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} (${folderCount})</span>
+            <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} <span class="counter">(${folderCount})</span></span>
           </h3>
           <div class="group-content">
             ${sourcesHtml}
@@ -696,14 +696,6 @@ function removeRowVisually(id) {
     
     row.remove();
 
-    // Nettoyage des groupes vides
-    if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
-      sourceGroup.remove();
-    }
-    if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
-      folderGroup.remove();
-    }
-
     const remaining = document.querySelectorAll(".item-row").length;
     chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
 
@@ -711,14 +703,14 @@ function removeRowVisually(id) {
     if (remaining === 0) {
       renderApp(); 
     } else {
-      // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
+      // Mise à jour dynamique des compteurs 
       if (sourceGroup && sourceGroup.isConnected) {
-        const span = sourceGroup.querySelector("h4 span");
-        if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
+        const counter = sourceGroup.querySelector(".counter");
+        if (counter) counter.textContent = `(${sourceGroup.querySelectorAll(".item-row").length})`;
       }
       if (folderGroup && folderGroup.isConnected) {
-        const span = folderGroup.querySelector("h3 span");
-        if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
+        const counter = folderGroup.querySelector(".counter");
+        if (counter) counter.textContent = `(${folderGroup.querySelectorAll(".item-row").length})`;
       }
     }
   }, 300);

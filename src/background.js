@@ -17,6 +17,7 @@ import { decodeEntities, addRef, formatTimeAgo, t } from "./utils.js";
 const DEFAULT_INTERVAL = 30;
 const DEFAULT_TTL = 30;
 const SCAN_BATCH_SIZE = 5;
+let isScanning = false;
 
 /**
  * INITIALISATION
@@ -74,11 +75,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  * LOGIQUE DE SCAN PRINCIPALE
  */
 async function performScan() {
-  // Vérification de la connectivité avant tout
-  if (!navigator.onLine) {
-    // console.log("RSSext: Appareil hors ligne, scan reporté.");
-    return;
-  }
+  if (!navigator.onLine) return;
+  
+  // Si un scan est déjà en cours, on annule l'exécution silencieusement
+  if (isScanning) return; 
+  isScanning = true;
 
   try {
     // Récupération de la config
@@ -170,6 +171,9 @@ async function performScan() {
     await updateBadge();
   } catch (err) {
     console.error("RSSext: Scan process failed", err);
+  } finally {
+    // On libère le verrou quoi qu'il arrive (succès ou erreur)
+    isScanning = false;
   }
 }
 
@@ -286,8 +290,15 @@ const NotificationSystem = {
    * Ajoute une notification à la file d'attente.
    */
   enqueue(item, source, attempt = 1) {
-    this.queue.push({ item, source, attempt });
-    this.processQueue();
+    // Vérifie si l'article (pour la même tentative) est déjà dans la file
+    const alreadyQueued = this.queue.some(
+      q => q.item.id === item.id && q.attempt === attempt
+    );
+
+    if (!alreadyQueued) {
+      this.queue.push({ item, source, attempt });
+      this.processQueue();
+    }
   },
 
   /**
