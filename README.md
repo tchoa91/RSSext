@@ -107,7 +107,7 @@ To keep the signal clear. Deeply nested hierarchies lead to digital hoarding. On
 
 ## CHANGE LOG
 
-**v1.0.1 :** Multiple under-the-hood bug fixes and improvements: core resilience, notifications tuning, better UI sync and a few tweaks.
+**v1.0.2 :** Multiple under-the-hood bug fixes and improvements: core resilience, notifications tuning, better UI sync and a few tweaks. See Commits for details.
 
 ## 🛠 How to Install and Use
 
