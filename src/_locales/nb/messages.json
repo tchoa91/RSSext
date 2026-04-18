@@ -71,5 +71,9 @@
   "footer_credits": { "message": " - GPL 3.0 , 2026 , François Bacconnet ", "description": "Footer credits text" },
   "folder_uncategorized": { "message": "Ukategorisert", "description": "Default folder for export" },
   "item_no_title": { "message": "Uten tittel", "description": "Fallback title for items" },
-  "source_new_title": { "message": "Ny kilde", "description": "Fallback title for new source" }
+  "source_new_title": { "message": "Ny kilde", "description": "Fallback title for new source" },
+  "time_mth": { "message": " mnd", "description": "Time ago suffix: months" },
+  "time_d": { "message": " d", "description": "Time ago suffix: days" },
+  "time_h": { "message": " t", "description": "Time ago suffix: hours" },
+  "time_min": { "message": " min", "description": "Time ago suffix: minutes" }
 }

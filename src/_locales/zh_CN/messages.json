@@ -71,5 +71,9 @@
   "footer_credits": { "message": " - GPL 3.0 , 2026 , François Bacconnet ", "description": "Footer credits text" },
   "folder_uncategorized": { "message": "未分类", "description": "Default folder for export" },
   "item_no_title": { "message": "无标题", "description": "Fallback title for items" },
-  "source_new_title": { "message": "新源", "description": "Fallback title for new source" }
+  "source_new_title": { "message": "新源", "description": "Fallback title for new source" },
+  "time_mth": { "message": "个月", "description": "Time ago suffix: months" },
+  "time_d": { "message": "天", "description": "Time ago suffix: days" },
+  "time_h": { "message": "小时", "description": "Time ago suffix: hours" },
+  "time_min": { "message": "分钟", "description": "Time ago suffix: minutes" }
 }

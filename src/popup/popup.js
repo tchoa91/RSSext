@@ -8,6 +8,7 @@
  */
 
 import { DB } from "../db.js";
+import { t, escapeHtml, formatTimeAgo, addRef, applyZoom, translateUI } from "../utils.js";
 
 // Références DOM
 const feedList = document.getElementById("feed-list");
@@ -49,43 +50,6 @@ const SVG_COLLAPSE = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height=
 const SVG_LIST = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`;
 const SVG_ALERT = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
 
-// Raccourci i18n
-/**
- * Fonction utilitaire pour l'i18n.
- * @param {string} key - La clé du message.
- * @returns {string} Le message traduit.
- */
-const t = (key) => chrome.i18n.getMessage(key);
-
-/**
- * Échappe les caractères HTML spéciaux pour prévenir les XSS.
- * @param {string} str - La chaîne brute.
- * @returns {string} La chaîne sécurisée.
- */
-const escapeHtml = (str) => {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-
-/**
- * Traduit les éléments HTML ayant un attribut data-i18n.
- */
-function translateUI() {
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const msg = t(el.dataset.i18n);
-    if (msg) el.textContent = msg;
-  });
-  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
-    const msg = t(el.dataset.i18nTitle);
-    if (msg) el.title = msg;
-  });
-}
-
 /**
  * INITIALISATION
  */
@@ -96,12 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.documentElement.style.setProperty("--main-hue", result.hue);
     }
     if (result.zoom) {
-      const zoomMap = {
-        small: "100%",
-        medium: "120%",
-        large: "150%"
-      };
-      document.documentElement.style.fontSize = zoomMap[result.zoom] || "100%";
+      applyZoom(result.zoom);
     }
   });
 
@@ -181,6 +140,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   openSettingsBtn.addEventListener("click", () => {
     chrome.runtime.openOptionsPage();
   });
+
+  // Bouton supprimer dans l'overlay
+  document.getElementById("delete-source").onclick = async () => {
+    if (confirm(t("ui_confirm_delete_full"))) {
+      await DB.deleteSource(dialog.dataset.currentUrl);
+      dialog.close();
+      renderApp();
+    }
+  };
 });
 
 /**
@@ -192,9 +160,7 @@ async function renderApp() {
   const viewMode = settings.view_mode || "date";
   const collapsedState = settings.collapsed || {};
 
-  const allItems = await DB.getItems();
-  // On ne garde que ceux qui n'ont pas le flag 'hidden'
-  const items = allItems.filter((item) => !item.hidden);
+  const items = await DB.getItems();
   const sources = await DB.getSources();
 
   // Pré-chargement des couleurs pour les dossiers
@@ -302,8 +268,6 @@ async function renderApp() {
   // Condition d'affichage de l'état vide :
   // - Mode Date : Pas d'articles
   // - Mode Dossier : Pas de sources.
-  // Subtilité : En mode Dossier, même si on a 0 articles, on veut afficher l'arborescence
-  // des dossiers/sources vides pour permettre à l'utilisateur de les gérer.
   const showEmptyState = (viewMode === "date" && items.length === 0) || (viewMode === "folder" && sources.length === 0);
 
   if (showEmptyState) {
@@ -382,7 +346,7 @@ async function renderApp() {
           <div class="source-group">
             <h4 class="collapsible-header source-header${isCollapsed}" data-toggle-id="${sourceId}">
               <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
-              <span>${escapeHtml(data.title)} (${sourceItems.length}) ${errorHtml}</span>
+              <span>${escapeHtml(data.title)} <span class="counter">(${sourceItems.length})</span> ${errorHtml}</span>
               <div class="source-actions">
                 <button class="icon-btn" data-action="edit-source" data-url="${data.url}" title="${t("ui_edit")}">
                   ${SVG_EDIT}
@@ -409,7 +373,7 @@ async function renderApp() {
         <div class="folder-group">
           <h3 class="collapsible-header folder-header${isCollapsed}" data-toggle-id="${folderId.replace(/"/g, "&quot;")}">
             <button class="chevron-btn" aria-expanded="${ariaExpanded}">${SVG_CHEVRON}</button>
-            <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} (${folderCount})</span>
+            <span class="folder-tag" ${hueStyle}>${escapeHtml(folder)} <span class="counter">(${folderCount})</span></span>
           </h3>
           <div class="group-content">
             ${sourcesHtml}
@@ -484,6 +448,8 @@ async function renderApp() {
         // Raison : Ouvrir un onglet actif provoque la fermeture immédiate de la Popup par Chrome,
         // ce qui tue instantanément ce processus JS. Tout code après tabs.create ne s'exécuterait pas.
         await DB.hideItem(id);
+        const remaining = feedList.querySelectorAll(".item-row").length - 1;
+        chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
         const background = e.ctrlKey || e.metaKey;
         chrome.tabs.create({ url: btn.href, active: !background });
       }
@@ -491,59 +457,10 @@ async function renderApp() {
       // Animation de sortie
       row.classList.add("dismissing");
 
-      // On attend la fin de l'animation CSS (300ms) avant de supprimer du DOM/DB
-      setTimeout(async () => {
-        if (action === "discard") await DB.hideItem(id);
-
-        const sourceGroup = row.closest(".source-group");
-        const folderGroup = row.closest(".folder-group");
-        
-        row.remove();
-
-        if (sourceGroup && sourceGroup.querySelectorAll(".item-row").length === 0) {
-          sourceGroup.remove();
-        }
-
-        if (folderGroup && folderGroup.querySelectorAll(".item-row").length === 0) {
-          folderGroup.remove();
-        }
-
-        const remaining = feedList.querySelectorAll(".item-row").length;
-        chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
-
-        if (remaining === 0) {
-          renderApp();
-        } else {
-          // Mise à jour dynamique des compteurs dans les titres (Vue Dossier)
-          if (sourceGroup && sourceGroup.isConnected) {
-            const span = sourceGroup.querySelector("h4 span");
-            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${sourceGroup.querySelectorAll(".item-row").length})`);
-          }
-          if (folderGroup && folderGroup.isConnected) {
-            const span = folderGroup.querySelector("h3 span");
-            if (span) span.textContent = span.textContent.replace(/\(\d+\)$/, `(${folderGroup.querySelectorAll(".item-row").length})`);
-          }
-        }
-      }, 300); // Correspond à la durée de transition CSS
+      if (action === "discard") await DB.hideItem(id);
+      removeRowVisually(id);
     }
   };
-}
-
-/**
- * Formate un timestamp en durée relative courte (ex: "5 min", "2 h").
- * @param {number} timestamp - Date en millisecondes.
- * @returns {string} Durée formatée.
- */
-function formatTimeAgo(timestamp) {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  let interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) return interval + " mois";
-  interval = Math.floor(seconds / 86400);
-  if (interval >= 1) return interval + " j";
-  interval = Math.floor(seconds / 3600);
-  if (interval >= 1) return interval + " h";
-  interval = Math.floor(seconds / 60);
-  return (interval > 0 ? interval : 1) + " min";
 }
 
 /**
@@ -668,7 +585,6 @@ async function openEditOverlay(source) {
   const urlInput = document.getElementById("edit-url");
   if (urlInput) {
     urlInput.value = source.xmlUrl;
-    urlInput.removeAttribute("required");
   }
   
   // Population du Select Dossier
@@ -719,15 +635,6 @@ async function handleDialogSubmit(e) {
   const urlInput = document.getElementById("edit-url");
   const newUrl = urlInput ? urlInput.value.trim() : oldUrl;
 
-  if (!newUrl) {
-    if (urlInput) {
-      urlInput.setCustomValidity("URL required");
-      urlInput.reportValidity();
-      urlInput.addEventListener("input", () => urlInput.setCustomValidity(""), { once: true });
-    }
-    return;
-  }
-
   const saveBtn = e.submitter;
   saveBtn.disabled = true;
   saveBtn.style.cursor = "wait";
@@ -764,34 +671,58 @@ async function handleDialogSubmit(e) {
     await DB.deleteSource(oldUrl);
   }
 
-  chrome.runtime.getBackgroundPage
-    ? null
-    : chrome.runtime.sendMessage({ action: "scan_now" });
+  chrome.runtime.sendMessage({ action: "scan_now" });
 
   dialog.close();
   renderApp();
 }
 
-// Bouton supprimer dans l'overlay
-document.getElementById("delete-source").onclick = async () => {
-  if (confirm(t("ui_confirm_delete_full"))) {
-    await DB.deleteSource(dialog.dataset.currentUrl);
-    dialog.close();
-    renderApp();
-  }
-};
+/**
+ * Supprime visuellement une ligne du DOM avec animation
+ * et met à jour les compteurs des dossiers/sources.
+ * @param {string} id - L'ID de l'item à supprimer
+ */
+function removeRowVisually(id) {
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (!row) return; // L'article n'est pas dans le DOM actuel
+
+  // Animation de sortie
+  row.classList.add("dismissing");
+
+  // On attend la fin de l'animation CSS avant de supprimer du DOM
+  setTimeout(() => {
+    const sourceGroup = row.closest(".source-group");
+    const folderGroup = row.closest(".folder-group");
+    
+    row.remove();
+
+    const remaining = document.querySelectorAll(".item-row").length;
+    chrome.action.setBadgeText({ text: remaining > 0 ? remaining.toString() : "" });
+
+    // Si c'était le dernier, on relance le rendu pour afficher l'état vide
+    if (remaining === 0) {
+      renderApp(); 
+    } else {
+      // Mise à jour dynamique des compteurs 
+      if (sourceGroup && sourceGroup.isConnected) {
+        const counter = sourceGroup.querySelector(".counter");
+        if (counter) counter.textContent = `(${sourceGroup.querySelectorAll(".item-row").length})`;
+      }
+      if (folderGroup && folderGroup.isConnected) {
+        const counter = folderGroup.querySelector(".counter");
+        if (counter) counter.textContent = `(${folderGroup.querySelectorAll(".item-row").length})`;
+      }
+    }
+  }, 300);
+}
 
 /**
- * Ajoute le paramètre UTM à l'URL sortante.
- * @param {string} url - URL originale.
- * @returns {string} URL signée.
+ * Écouteur d'événements globaux provenant du Background
+ * Utile pour rafraîchir l'interface si l'utilisateur interagit 
+ * avec les notifications pendant que la popup est ouverte.
  */
-function addRef(url) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set("utm_source", "RSSext");
-    return urlObj.toString();
-  } catch (e) {
-    return url;
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === "hide_item_ui" && message.itemId) {
+    removeRowVisually(message.itemId);
   }
-}
+});

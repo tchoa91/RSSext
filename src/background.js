@@ -11,21 +11,30 @@
  */
 
 import { DB } from "./db.js";
+import { decodeEntities, addRef, formatTimeAgo, t } from "./utils.js";
 
-// Configuration par défaut (pourrait être déplacée dans chrome.storage plus tard)
+// Configuration 
 const DEFAULT_INTERVAL = 30;
 const DEFAULT_TTL = 30;
 const SCAN_BATCH_SIZE = 5;
+let isScanning = false;
 
 /**
  * INITIALISATION
  * Se déclenche à l'installation ou lors d'une mise à jour.
  */
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("RSSext: Extension installed. Setting up alarm...");
-  // Création de l'alarme principale pour le polling
-  chrome.alarms.create("rss-scan-alarm", { periodInMinutes: DEFAULT_INTERVAL });
-  // Premier scan immédiat
+chrome.runtime.onInstalled.addListener(async () => {
+  const config = await chrome.storage.local.get(["interval"]);
+  const interval = parseInt(config.interval, 10) || DEFAULT_INTERVAL;
+  chrome.alarms.create("rss-scan-alarm", { periodInMinutes: interval });
+  performScan();
+});
+
+/**
+ * AU DÉMARRAGE DU NAVIGATEUR
+ * Lance un scan immédiat pour rafraîchir les données.
+ */
+chrome.runtime.onStartup.addListener(() => {
   performScan();
 });
 
@@ -47,7 +56,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     const items = await DB.getItems();
     const item = items.find((i) => i.id === itemId);
     // On ne relance que si l'item existe encore et n'est pas caché
-    if (item && !item.hidden) {
+    if (item) {
       // On doit retrouver la source pour l'affichage
       const sources = await DB.getSources();
       const source = sources.find((s) => s.xmlUrl === item.xmlUrl);
@@ -66,6 +75,12 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
  * LOGIQUE DE SCAN PRINCIPALE
  */
 async function performScan() {
+  if (!navigator.onLine) return;
+  
+  // Si un scan est déjà en cours, on annule l'exécution silencieusement
+  if (isScanning) return; 
+  isScanning = true;
+
   try {
     // Récupération de la config
     const config = await chrome.storage.local.get(["ttl", "notify"]);
@@ -73,22 +88,37 @@ async function performScan() {
 
     // 1. Purge du buffer (TTL) avant de commencer
     await DB.purgeOldItems(ttl);
+    await updateBadge();
 
     // 2. Récupération des sources et des items existants (une seule fois)
     const sources = await DB.getSources();
-    const existingItems = await DB.getItems();
+    const existingItems = await DB.getAllItems();
     const existingIds = new Set(existingItems.map((i) => i.id));
 
     // 3. Traitement par lots parallèles
     for (let i = 0; i < sources.length; i += SCAN_BATCH_SIZE) {
       const batch = sources.slice(i, i + SCAN_BATCH_SIZE);
 
-      const batchPromises = batch.map((source) =>
-        fetch(source.xmlUrl, { cache: "no-store" }).then((response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          return response.text();
-        }),
-      );
+      const batchPromises = batch.map((source) => {
+        // Implémentation du Timeout de sécurité (10 secondes)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        return fetch(source.xmlUrl, { cache: "no-store", signal: controller.signal })
+          .then((response) => {
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text();
+          })
+          .catch((err) => {
+            clearTimeout(timeoutId);
+            // Si l'erreur est déclenchée par notre AbortController
+            if (err.name === 'AbortError') {
+              throw new Error("Timeout (10s)");
+            }
+            throw err;
+          });
+      });
 
       const results = await Promise.allSettled(batchPromises);
 
@@ -102,12 +132,16 @@ async function performScan() {
             const freshItems = parseFeed(xmlText, source.xmlUrl, ttl);
 
             // Filtrage des nouveautés par rapport à ce qui est déjà en base OU déjà trouvé dans ce scan
-            const newItems = freshItems.filter((item) => !existingIds.has(item.id));
+            const newItems = freshItems.filter((item) => {
+              if (!existingIds.has(item.id)) {
+                existingIds.add(item.id); // On l'ajoute immédiatement pour bloquer les doublons suivants
+                return true;
+              }
+              return false;
+            });
 
             if (newItems.length > 0) {
               await DB.addItems(newItems);
-              // On met à jour le set d'IDs pour éviter les doublons dans le même lot
-              newItems.forEach((item) => existingIds.add(item.id));
 
               if (source.notify && config.notify !== false) {
                 newItems.forEach((item) => {
@@ -137,6 +171,9 @@ async function performScan() {
     await updateBadge();
   } catch (err) {
     console.error("RSSext: Scan process failed", err);
+  } finally {
+    // On libère le verrou quoi qu'il arrive (succès ou erreur)
+    isScanning = false;
   }
 }
 
@@ -162,10 +199,10 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
     );
     const pubDate = dateMatch ? new Date(dateMatch[2]).getTime() : now;
 
-    // 2. LE GARDE-BARRIÈRE : Si l'article est plus vieux que le buffer, on ignore
+    // 2. Si l'article est plus vieux que le buffer, on ignore
     if (pubDate < threshold) continue;
 
-    // 3. Extraction Titre et Lien (le reste ne change pas)
+    // 3. Extraction Titre et Lien
     const titleMatch = block.match(
       /<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/,
     );
@@ -174,16 +211,58 @@ function parseFeed(xmlString, xmlUrl, ttl = 30) {
 
     let link = "";
     const rssLinkMatch = block.match(/<link>([\s\S]*?)<\/link>/);
+    
     if (rssLinkMatch) {
+      // Stratégie RSS 2.0 classique
       link = rssLinkMatch[1].trim();
     } else {
-      const atomLinkMatch = block.match(/<link[^+]+href=["']([^"']+)["']/);
-      link = atomLinkMatch ? atomLinkMatch[1] : "";
+      // Stratégie Atom : on récupère toutes les balises <link> de l'entrée
+      const atomLinks = block.match(/<link[^>]+>/ig) || [];
+      
+      for (const linkTag of atomLinks) {
+        // Règle n°1 : On ignore strictement les liens qui pointent vers le flux lui-même
+        if (/rel=["']self["']/i.test(linkTag)) {
+          continue;
+        }
+
+        const hrefMatch = linkTag.match(/href=["']([^"']+)["']/i);
+        if (hrefMatch) {
+          link = hrefMatch[1];
+          
+          // Règle n°2 : Si on trouve un alternate explicite, c'est le vainqueur absolu.
+          if (/rel=["']alternate["']/i.test(linkTag)) {
+            break; 
+          }
+          // Note : S'il n'y a pas d'attribut 'rel', on stocke le href (Atom suppose que c'est l'alternate par défaut),
+          // mais on laisse la boucle continuer au cas où un vrai alternate plus qualitatif se cache plus loin.
+        }
+      }
     }
 
     if (link) {
       link = decodeEntities(link);
-      // On encode l'URL pour gérer les caractères spéciaux, puis on stocke l'empreinte complète.
+      try {
+        const urlObj = new URL(link);
+        // On refuse tout ce qui n'est pas strictement du HTTP(S)
+        if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+           continue; // On rejette ce lien empoisonné ou invalide
+        }
+        // Liste noire des paramètres de tracking les plus toxiques/courants
+        const trackingParams = [
+          "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", 
+          "fbclid", // Facebook
+          "gclid",  // Google Ads
+          "igshid", // Instagram
+          "si"      // YouTube Share ID (souvent ajouté récemment)
+        ];
+        trackingParams.forEach(param => urlObj.searchParams.delete(param));
+        link = urlObj.toString();
+      } catch (e) {
+        // L'URL est malformée ou relative (ex: "/article/1").
+        // On la laisse telle quelle plutôt que de crasher le parser entier.
+      }
+
+      // On encode l'URL pour générer l'ID
       const id = btoa(encodeURIComponent(link)).replace(/=/g, '');
       items.push({ id, xmlUrl, title, link, timestamp: pubDate }); // On stocke la vraie date !
     }
@@ -209,17 +288,21 @@ const NotificationSystem = {
 
   /**
    * Ajoute une notification à la file d'attente.
-   * @param {Object} item - L'article
-   * @param {Object} source - La source
-   * @param {number} attempt - 1 (premier passage) ou 2 (retry 15min)
    */
   enqueue(item, source, attempt = 1) {
-    this.queue.push({ item, source, attempt });
-    this.processQueue();
+    // Vérifie si l'article (pour la même tentative) est déjà dans la file
+    const alreadyQueued = this.queue.some(
+      q => q.item.id === item.id && q.attempt === attempt
+    );
+
+    if (!alreadyQueued) {
+      this.queue.push({ item, source, attempt });
+      this.processQueue();
+    }
   },
 
   /**
-   * Traite la file d'attente avec un throttling (1 seconde).
+   * Traite la file d'attente avec un throttling
    */
   processQueue() {
     if (this.isProcessing || this.queue.length === 0) return;
@@ -227,38 +310,31 @@ const NotificationSystem = {
     this.isProcessing = true;
     const { item, source, attempt } = this.queue.shift();
 
-    // Vérification ultime : l'article est-il toujours valide (non caché) ?
     DB.getItems().then((items) => {
       const dbItem = items.find((i) => i.id === item.id);
-      if (dbItem && !dbItem.hidden) {
+      if (dbItem) {
         this.show(item, source, attempt);
       }
     }).finally(() => {
-      // Throttling : on attend 2s avant de traiter le suivant
+      // 2. Définition et bascule du délai
+      const currentDelay = this.useLongDelay ? 3000 : 2800;
+      this.useLongDelay = !this.useLongDelay; // On inverse pour le prochain passage
+
+      // 3. Application du délai calculé
       setTimeout(() => {
         this.isProcessing = false;
         this.processQueue();
-      }, 2000);
+      }, currentDelay);
     });
   },
 
   /**
    * Affiche la notification native.
-   * @param {Object} item - L'article.
-   * @param {Object} source - La source.
-   * @param {number} attempt - Le numéro de la tentative.
    */
   show(item, source, attempt) {
     // Calcul de l'âge pour le contexte
-    const diff = Date.now() - item.timestamp;
-    const minutes = Math.floor(diff / 60000);
-    let age;
-    if (minutes < 60) age = `${minutes} min`;
-    else if (minutes < 1440) age = `${Math.floor(minutes / 60)} h`;
-    else if (minutes < 43200) age = `${Math.floor(minutes / 1440)} d`;
-    else age = `${Math.floor(minutes / 43200)} m`;
-
-    const category = source.folder || "Général";
+    const age = formatTimeAgo(item.timestamp);
+    const category = source.folder || t("folder_general");
 
     // ID unique pour la notif, mais on garde l'ID de l'item pour la logique
     // Format: "item_id:attempt:timestamp"
@@ -294,13 +370,14 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
   const [itemId] = notifId.split(":");
   NotificationSystem.handledIds.add(notifId); // Marqué comme traité
 
-  const items = await DB.getItems();
+  const items = await DB.getAllItems();
   const item = items.find((i) => i.id === itemId);
   
   if (item) {
-    chrome.tabs.create({ url: addRef(item.link) });
     await DB.hideItem(itemId);
     updateBadge();
+    chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
+    chrome.tabs.create({ url: addRef(item.link) });
   }
   chrome.notifications.clear(notifId);
 });
@@ -311,18 +388,19 @@ chrome.notifications.onClicked.addListener(async (notifId) => {
 chrome.notifications.onButtonClicked.addListener(async (notifId, btnIdx) => {
   const [itemId] = notifId.split(":");
   NotificationSystem.handledIds.add(notifId); // Marqué comme traité
+  chrome.notifications.clear(notifId);
 
-  if (btnIdx === 0) {
-    // OPEN
-    const items = await DB.getItems();
-    const item = items.find((i) => i.id === itemId);
-    if (item) chrome.tabs.create({ url: addRef(item.link) });
-  }
-  
-  // DANS TOUS LES CAS (Open ou Discard) -> On cache l'item
   await DB.hideItem(itemId);
   updateBadge();
-  chrome.notifications.clear(notifId);
+  chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
+
+  if (btnIdx === 0) { // OPEN
+    const items = await DB.getAllItems();
+    const item = items.find((i) => i.id === itemId);
+    if (item) {
+      chrome.tabs.create({ url: addRef(item.link) });
+    }
+  }
 });
 
 /**
@@ -334,7 +412,10 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
 
   // Si fermé par l'utilisateur (la croix), on considère ça comme un "Vu/Ignoré" -> On cache
   if (byUser) {
-    DB.hideItem(itemId).then(updateBadge);
+    DB.hideItem(itemId).then(() => {
+      updateBadge();
+      chrome.runtime.sendMessage({ action: "hide_item_ui", itemId: itemId }).catch(() => {});
+    });
     return;
   }
 
@@ -342,7 +423,7 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
   if (!byUser && !NotificationSystem.handledIds.has(notifId)) {
     // Si c'était la première tentative, on programme le retry dans 15 min
     if (attempt === 1) {
-      console.log(`RSSext: Item ${itemId} ignored. Retrying in 15min.`);
+      // console.log(`RSSext: Item ${itemId} ignored. Retrying in 15min.`);
       chrome.alarms.create(`retry:${itemId}`, { delayInMinutes: 15 });
     }
     // Si attempt === 2, on abandonne (supprimé de la queue visuelle, mais reste dans la DB non-caché)
@@ -358,7 +439,7 @@ chrome.notifications.onClosed.addListener((notifId, byUser) => {
  */
 async function updateBadge() {
   const items = await DB.getItems();
-  const count = items.filter((i) => !i.hidden).length;
+  const count = items.length;
   const text = count > 0 ? count.toString() : "";
   chrome.action.setBadgeText({ text });
 }
@@ -378,12 +459,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "scan_now") {
-    console.log("RSSext: Scan manuel déclenché après import.");
-    performScan(); // Ta fonction qui boucle sur les sources et fetch le XML
+    // console.log("RSSext: Scan manuel déclenché après import.");
+    performScan(); 
   }
 
   if (request.action === "update_settings") {
-    console.log("RSSext: Settings updated. Refreshing alarm...");
+    // console.log("RSSext: Settings updated. Refreshing alarm...");
     
     // Interruption immédiate des notifications en cours
     NotificationSystem.clear();
@@ -396,40 +477,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     performScan();
   }
 });
-
-/**
- * Décode les entités HTML (numériques et nommées basiques)
- * @param {string} str - Chaîne encodée.
- * @returns {string} Chaîne décodée.
- */
-function decodeEntities(str) {
-  if (!str) return "";
-  return str.replace(/&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});/ig, (match, entity) => {
-    entity = entity.toLowerCase();
-    if (entity.startsWith("#x")) {
-      return String.fromCharCode(parseInt(entity.substr(2), 16));
-    }
-    if (entity.startsWith("#")) {
-      return String.fromCharCode(parseInt(entity.substr(1), 10));
-    }
-    const named = {
-      "amp": "&", "lt": "<", "gt": ">", "quot": "\"", "apos": "'"
-    };
-    return named[entity] || match;
-  });
-}
-
-/**
- * Ajoute la signature RSSext à l'URL
- * @param {string} url - URL brute.
- * @returns {string} URL avec utm_source.
- */
-function addRef(url) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set("utm_source", "RSSext");
-    return urlObj.toString();
-  } catch (e) {
-    return url;
-  }
-}

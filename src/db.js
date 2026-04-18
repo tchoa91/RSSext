@@ -3,13 +3,11 @@
  * RSSext - Module de Persistence (GPL-3.0)
  * ============================================================================
  * * PHILOSOPHIE :
- * Ce module gère le stockage local via IndexedDB. Contrairement aux lecteurs
- * classiques, RSSext traite les données comme volatiles.
+ * Ce module gère le stockage local via IndexedDB.
  * - 'sources' : Conserve tes abonnements et préférences (dossiers, notifications).
  * - 'items'   : Agit comme un buffer circulaire éphémère pour les nouveaux titres.
  * * ARCHITECTURE :
  * Utilise des Promises pour une intégration fluide dans le Service Worker (async/await).
- * Aucun stockage de contenu (body/description), seulement des métadonnées de lien.
  * ============================================================================
  */
 
@@ -128,13 +126,37 @@ export const DB = {
    * Récupère tous les articles actuellement présents dans le buffer.
    * @returns {Promise<Array>} Liste des articles { id, title, link, ... }
    */
-  async getItems() {
+  async getAllItems() {
     const db = await this.open();
     return new Promise((resolve) => {
       const transaction = db.transaction("items", "readonly");
       const store = transaction.objectStore("items");
       const request = store.getAll();
       request.onsuccess = () => resolve(request.result);
+    });
+  },
+
+  /**
+   * Récupère uniquement les articles non cachés.
+   * @returns {Promise<Array>} Liste des articles visibles { id, title, link, ... }
+   */
+  async getItems() {
+    const db = await this.open();
+    return new Promise((resolve) => {
+      const transaction = db.transaction("items", "readonly");
+      const store = transaction.objectStore("items");
+      const request = store.openCursor();
+      const results = [];
+
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          if (!cursor.value.hidden) results.push(cursor.value);
+          cursor.continue(); // Passe à l'enregistrement suivant
+        } else {
+          resolve(results); // Fin du parcours
+        }
+      };
     });
   },
 
