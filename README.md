@@ -29,7 +29,7 @@ RSSext is built on a "Zero-Captation" model. We believe in a clean flow between 
 - **No Noise:** No algorithms, no "suggested content," no AI-curation. Just your feeds.
 - **Total Privacy:** No tracking, no ads, no external servers, and no user IDs. Your data stays where it belongs: in your browser's IndexedDB.
 - **Publisher Friendly:** We don't scrape content into a silo. We route you directly to the source, respecting creators' traffic and analytics.
-- **Accessible:** Built with standards-compliant HTML/CSS (WCAG friendly) featuring a customizable HSL interface with in-tool zoom options. 17 languages.
+- **Accessible:** Built with standards-compliant HTML/CSS (WCAG friendly) featuring a customizable HSL interface with in-tool zoom options. 17 languages. ([Accessibility in Small Tech](./ACCESSIBILITY.md))
 - **Open-Source:** A few dozen KB of annotated, readable, and auditable code. No bloat, no obfuscation.
 
 ### 🍃 Tiny Footprint
